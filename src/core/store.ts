@@ -6,9 +6,13 @@ import { isConnector, syncConnectors } from './connect';
 import { bboxOf } from './transform';
 import { layout, type LayoutKind } from './layout';
 import { textWidth } from './text';
-import { convertToPath as toPath, revertPath as fromPath, canConvertToPath } from './pathedit';
+import { convertToPath as toPath, revertPath as fromPath, canConvertToPath, cornerNodes, type NodeRef } from './pathedit';
+import { booleanRings, offsetRings, ringsToSubs, shapeOperand, type BoolOp, type Ring } from './boolean';
+import { arrayPlaces, type ArrayKind } from './repeat';
+import { rotateShapes } from './transform';
 
 type Listener = () => void;
+const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 
 /**
  * Nâng cấp tài liệu cũ lên định dạng hiện tại. Trả về null nếu không đọc được.
@@ -233,6 +237,102 @@ export class DocStore {
     return true;
   }
 
+  /* ---------- Tạo hình phức tạp từ hình đơn giản (nhóm D) ---------- */
+
+  /** Hình tham gia được phép toán / phình co (không phải chữ, ảnh, đường nối). */
+  private solids() { return this.selection.filter((s) => canConvertToPath(s) || s.t === 'path'); }
+
+  /** Ghi các vòng (tọa độ trang) vào hình s, biến nó thành đường tự do (không quay lại dạng thông số được). */
+  private setRings(s: Shape, rings: Ring[]) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const r of rings) for (const [x, y] of r) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+    s.t = 'path'; s.x = x0 + w / 2; s.y = y0 + h / 2; s.w = w; s.h = h; s.r = 0; s.fx = 1; s.fy = 1;
+    delete s.label;
+    s.p = { parts: [{ sh: 0, rule: 'nonzero', subs: ringsToSubs(rings.map((r) => r.map(([x, y]) => [(x - x0) / w, (y - y0) / h] as [number, number]))) }], edited: true };
+  }
+
+  /**
+   * Hợp / trừ / giao / loại trừ các hình đang chọn thành một hình mới (giữ màu của hình dưới cùng,
+   * đặt ở lớp của hình trên cùng). Trả về: 1 = xong, 0 = cần ≥ 2 hình, −1 = kết quả rỗng.
+   */
+  booleanOp(op: BoolOp): number {
+    const ops = this.solids(); if (ops.length < 2) return 0;
+    const rings = booleanRings(ops.map(shapeOperand), op);
+    if (!rings.length) return -1;
+    const base = ops[0], ids = new Set(ops.map((s) => s.id));
+    const top = Math.max(...ops.map((s) => this.doc.shapes.indexOf(s)));
+    const res: Shape = { ...JSON.parse(JSON.stringify(base)), id: this.doc.seq++, name: { union: 'Hợp hình', subtract: 'Hình trừ', intersect: 'Phần giao', exclude: 'Loại trừ' }[op] };
+    delete res.gid;
+    this.setRings(res, rings);
+    const kept = this.doc.shapes.filter((s, i) => i <= top && !ids.has(s.id) && !(isConnector(s) && (ids.has(s.p.a) || ids.has(s.p.b))));
+    const after = this.doc.shapes.filter((s, i) => i > top && !(isConnector(s) && (ids.has(s.p.a) || ids.has(s.p.b))));
+    this.doc.shapes = [...kept, res, ...after];
+    this.sel = [res.id];
+    this.commit(); this.emitSelect();
+    return 1;
+  }
+
+  /** Phình ra (d > 0) hoặc co vào (d < 0) đường viền các hình đang chọn. Trả về số hình đã đổi. */
+  offsetSelection(d: number): number {
+    let n = 0;
+    for (const s of this.solids()) { const r = offsetRings(shapeOperand(s), d); if (r.length) { this.setRings(s, r); n++; } }
+    if (n) { this.commit(); this.emitSelect(); }
+    return n;
+  }
+
+  /** Bo tròn / vát các góc (tự chuyển hình thành đường nếu cần). refs: chỉ các điểm neo này. Trả về số góc đã xử lý. */
+  cornerSelection(mode: 'round' | 'chamfer', dist: number, refs?: NodeRef[]): number {
+    let n = 0;
+    for (const s of this.solids()) {
+      if (s.t !== 'path') toPath(s);
+      n += cornerNodes(s, mode, dist, refs);
+    }
+    if (n) { this.commit(); this.emitSelect(); }
+    return n;
+  }
+
+  /**
+   * Mảng lặp: tạo thêm (count − 1) bản sao của vùng chọn theo hàng / cột / lưới / vòng, rồi nhóm tất cả lại.
+   * gap: khoảng cách (hàng, lưới) hoặc bán kính (vòng). Trả về số bản sao đã tạo.
+   */
+  makeArray(kind: ArrayKind, count: number, gap: number, opts: { cols?: number; rotate?: boolean } = {}): number {
+    const list = this.selection.filter((s) => !isConnector(s)); if (!list.length) return 0;
+    const json = this.copySelection(); if (!json) return 0;
+    const b = bboxOf(list), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+    const places = arrayPlaces(kind, count, b.x1 - b.x0, b.y1 - b.y0, gap, opts);
+    const all = [...this.sel];
+    for (const pl of places) {
+      const ids = this.pasteRaw(json, { x: cx + pl.dx, y: cy + pl.dy });
+      const copies = this.doc.shapes.filter((s) => ids.includes(s.id) && !isConnector(s));
+      if (pl.rot) rotateShapes(clone(copies), copies, cx + pl.dx, cy + pl.dy, pl.rot);
+      all.push(...ids);
+    }
+    this.sel = all.filter((id) => !isConnector(this.doc.shapes.find((s) => s.id === id)!));
+    if (this.sel.length >= 2) this.group(); else { this.commit(); this.emitSelect(); }
+    return places.length;
+  }
+
+  /**
+   * Tạo bản gương của vùng chọn: 'h' = lật qua cạnh phải (đối xứng trái–phải), 'v' = lật qua cạnh dưới.
+   * Bản gương được chọn sẵn; Hợp hình với bản gốc để có hình đối xứng liền khối.
+   */
+  mirrorCopy(axis: 'h' | 'v'): number {
+    const list = this.selection.filter((s) => !isConnector(s)); if (!list.length) return 0;
+    const json = this.copySelection(); if (!json) return 0;
+    const b = bboxOf(list);
+    const ids = this.pasteRaw(json, { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 });
+    for (const s of this.doc.shapes) {
+      if (!ids.includes(s.id) || isConnector(s)) continue;
+      if (axis === 'h') { s.x = 2 * b.x1 - s.x; s.fx = (s.fx * -1) as 1 | -1; }
+      else { s.y = 2 * b.y1 - s.y; s.fy = (s.fy * -1) as 1 | -1; }
+      s.r = ((360 - s.r) % 360 + 360) % 360;
+    }
+    this.sel = ids.filter((id) => !isConnector(this.doc.shapes.find((s) => s.id === id)!));
+    this.commit(); this.emitSelect();
+    return this.sel.length;
+  }
+
   /* ---------- Tự bố trí ---------- */
 
   /** Bố trí lại vùng chọn (hoặc cả trang nếu chưa chọn gì) thành cây, vòng hoặc lưới theo các đường nối. */
@@ -266,8 +366,15 @@ export class DocStore {
    * Trả về số hình đã dán (0 nếu chuỗi không phải dữ liệu của Vector Studio).
    */
   pasteShapes(json: string, at?: { x: number; y: number }): number {
-    let o: any; try { o = JSON.parse(json); } catch { return 0; }
-    if (!o || o.kind !== 'vector-studio/shapes' || !Array.isArray(o.shapes) || !o.shapes.length) return 0;
+    const ids = this.pasteRaw(json, at); if (!ids.length) return 0;
+    this.commit(); this.emitSelect();
+    return ids.length;
+  }
+
+  /** Dán mà không ghi mốc hoàn tác (dùng chung cho dán, nhân đôi, mảng, gương). Trả về id các hình mới. */
+  private pasteRaw(json: string, at?: { x: number; y: number }): number[] {
+    let o: any; try { o = JSON.parse(json); } catch { return []; }
+    if (!o || o.kind !== 'vector-studio/shapes' || !Array.isArray(o.shapes) || !o.shapes.length) return [];
     const src: Shape[] = o.shapes;
     const real = src.filter((s) => !isConnector(s));
     const b = bboxOf(real.length ? real : src);
@@ -288,8 +395,7 @@ export class DocStore {
     this.doc.shapes = [...conns, ...this.doc.shapes, ...rest];
     this.sel = rest.map((s) => s.id);
     syncConnectors(this.doc);
-    this.commit(); this.emitSelect();
-    return out.length;
+    return out.map((s) => s.id);
   }
   /** Nhân đôi các hình đang chọn (nhóm thành nhóm mới, đường nối giữa chúng được nối lại). */
   duplicate() {

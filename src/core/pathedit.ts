@@ -191,3 +191,42 @@ export function segmentLocal(s: Shape, pi: number, si: number, k: number): [XY, 
 }
 
 export const nodeCount = (s: Shape) => (s.p.parts || []).reduce((n: number, pt: PathPart) => n + pt.subs.reduce((m, sp) => m + sp.n.length, 0), 0);
+
+/* ---------- Bo góc / vát góc ---------- */
+
+/**
+ * Bo tròn ('round') hoặc vát ('chamfer') các góc nhọn nằm giữa hai cạnh thẳng.
+ * dist: khoảng cắt dọc mỗi cạnh (tự giới hạn ≤ 45% cạnh ngắn hơn). refs: chỉ xử lý các điểm này (mặc định: mọi góc).
+ * Bo tròn dùng cung tròn chuẩn (tay nắm Bézier theo công thức 4/3·tan(φ/4)). Trả về số góc đã xử lý.
+ */
+export function cornerNodes(s: Shape, mode: 'round' | 'chamfer', dist: number, refs?: NodeRef[]): number {
+  if (s.t !== 'path' || dist <= 0) return 0;
+  const parts = localParts(s);
+  let count = 0;
+  parts.forEach((pt, pi) => pt.subs.forEach((sp, si) => {
+    const N = sp.n.length, out: PNode[] = [];
+    sp.n.forEach((n, ni) => {
+      const want = !refs || refs.some((r) => r.pi === pi && r.si === si && r.ni === ni);
+      const hasPrev = sp.c || ni > 0, hasNext = sp.c || ni < N - 1;
+      const prev = sp.n[(ni - 1 + N) % N], next = sp.n[(ni + 1) % N];
+      const straight = hasPrev && hasNext && !n.i && !n.o && !prev.o && !next.i;
+      if (!want || !straight) { out.push(n); return; }
+      const l1 = Math.hypot(prev.x - n.x, prev.y - n.y), l2 = Math.hypot(next.x - n.x, next.y - n.y);
+      if (l1 < 1e-6 || l2 < 1e-6) { out.push(n); return; }
+      const u1: XY = [(prev.x - n.x) / l1, (prev.y - n.y) / l1], u2: XY = [(next.x - n.x) / l2, (next.y - n.y) / l2];
+      const theta = Math.acos(Math.max(-1, Math.min(1, u1[0] * u2[0] + u1[1] * u2[1]))); // góc trong
+      if (theta > Math.PI - 0.01) { out.push(n); return; } // gần như thẳng hàng: không có góc
+      const c = Math.min(dist, l1 * 0.45, l2 * 0.45);
+      const A: PNode = { x: n.x + u1[0] * c, y: n.y + u1[1] * c }, B: PNode = { x: n.x + u2[0] * c, y: n.y + u2[1] * c };
+      if (mode === 'round') {
+        const R = c * Math.tan(theta / 2), phi = Math.PI - theta, h = (4 / 3) * Math.tan(phi / 4) * R;
+        A.o = [A.x - u1[0] * h, A.y - u1[1] * h];
+        B.i = [B.x - u2[0] * h, B.y - u2[1] * h];
+      }
+      out.push(A, B); count++;
+    });
+    sp.n = out;
+  }));
+  if (count) store(s, parts);
+  return count;
+}

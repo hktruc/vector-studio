@@ -4,7 +4,8 @@ import type { Shape } from '../core/types';
 import type { BrandPalette } from '../core/palette';
 import { mix } from '../core/color';
 import { isConnector } from '../core/connect';
-import { canConvertToPath, nodeCount } from '../core/pathedit';
+import { canConvertToPath, nodeCount, type NodeRef } from '../core/pathedit';
+import type { ArrayKind } from '../core/repeat';
 
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const $ = <T extends HTMLElement>(root: HTMLElement, id: string) => root.querySelector<T>('#' + id)!;
@@ -28,6 +29,16 @@ const DIST: [string, string, string][] = [
   ['v', 'Phân bố đều theo chiều dọc', ic(ln(1, 1, 15, 1) + ln(1, 15, 15, 15) + rc(4, 3, 8, 3) + rc(4, 10, 8, 3))],
 ];
 
+/* Biểu tượng phép toán hình: hai hình tròn chồng nhau, phần tô là kết quả */
+const A_ = 'M1 7a6 6 0 1 0 12 0a6 6 0 1 0-12 0', B_ = 'M7 7a6 6 0 1 0 12 0a6 6 0 1 0-12 0', LENS = 'M10 1.8A6 6 0 0 1 10 12.2A6 6 0 0 1 10 1.8Z';
+const bi = (body: string) => `<svg viewBox="0 0 20 14" width="22" height="16">${body}</svg>`;
+const BOOL: [string, string, string][] = [
+  ['union', 'Hợp', bi(`<path d="${A_} ${B_}" fill="currentColor"/>`)],
+  ['subtract', 'Trừ', bi(`<path d="${A_}" fill="currentColor"/><path d="${B_}" fill="#fff" stroke="currentColor" stroke-dasharray="2 1.5"/>`)],
+  ['intersect', 'Giao', bi(`<path d="${A_} ${B_}" fill="none" stroke="currentColor" stroke-dasharray="2 1.5"/><path d="${LENS}" fill="currentColor"/>`)],
+  ['exclude', 'Loại trừ', bi(`<path d="${A_} ${B_}" fill="currentColor" fill-rule="evenodd"/>`)],
+];
+
 /** Khối nút căn chỉnh. toPage: chỉ có một hình/nhóm → căn theo trang. */
 function alignHTML(toPage: boolean, canDistribute: boolean) {
   let h = `<div class="grp">${toPage ? 'Căn theo trang' : 'Căn chỉnh'}</div><div class="algn">`;
@@ -42,6 +53,14 @@ function wireAlign(P: HTMLElement, st: DocStore) {
 
 /** Bảng thuộc tính bên phải, dựng lại mỗi khi đổi hình được chọn. */
 export class PropsPanel {
+  /** Hiện thông báo ngắn (app nối với dòng thông báo trên thanh công cụ). */
+  onMsg: (t: string) => void = () => {};
+  /** Điểm neo đang chọn trên khung (khi đang sửa điểm neo) — bo/vát chỉ góc đó. */
+  getNodeSel: () => NodeRef | null = () => null;
+  /** Lựa chọn cho mảng lặp và góc (nhớ giữa các lần chọn hình). */
+  private arr = { kind: 'row' as ArrayKind, count: 4, gap: 20, radius: 200, rotate: true };
+  private cdist = 12;
+  private odist = 10;
   /** Gọi khi người dùng muốn sửa điểm neo của một đường (app nối với khung vẽ). */
   onEditPath: (id: number) => void = () => {};
   /** Bấm ô màu trong bộ màu thương hiệu thì áp vào đâu. */
@@ -72,6 +91,7 @@ export class PropsPanel {
     let h = s.t === 'text' || s.t === 'image' || s.t === 'curve' ? '' : `<div class="grp">Chữ trên hình</div><textarea id="lbl" rows="2" placeholder="Bấm đúp vào hình để gõ trực tiếp">${esc(s.label ?? '')}</textarea><div class="r2"><div><label>Màu chữ</label><input type="color" id="lc" value="${s.lc || '#ffffff'}"></div><div><label>&nbsp;</label><button class="b alt sm" id="lcauto" ${s.lc ? '' : 'disabled'}>Màu tự động</button></div></div><p class="hint">Chữ tự co vừa khung. Tab khi đang gõ: tạo ý tiếp theo đã nối.</p>`;
     h += `<div class="grp">Vị trí & kích thước</div><div class="r3"><div><label>X</label><input type="number" id="nx"></div><div><label>Y</label><input type="number" id="ny"></div><div><label>Xoay °</label><input type="number" id="nr"></div></div><div class="r2"><div><label>Rộng</label><input type="number" id="nw"></div><div><label>Cao</label><input type="number" id="nh"></div></div>`;
     h += alignHTML(true, false);
+    h += this.toolsHTML([s]);
     h += s.t === 'image'
       ? `<div class="grp">Ảnh</div><label>Độ trong suốt <span id="opv">${Math.round(s.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${s.op}">`
       : this.colorHTML([s], true);
@@ -95,6 +115,7 @@ export class PropsPanel {
     h += `<p class="hint">Giữ Shift và bấm hình khác để chọn thêm, rồi bấm <b>Nhóm</b> (Ctrl+G).</p>`;
     P.innerHTML = h;
     wireAlign(P, st);
+    this.wireTools();
     this.syncNumbers();
     const lbl = P.querySelector<HTMLTextAreaElement>('#lbl');
     if (lbl) {
@@ -148,10 +169,12 @@ export class PropsPanel {
     const shapesN = list.filter((x) => !isConnector(x)).length;
     if (shapesN >= 2) h += `<div class="grp">Sơ đồ</div><div class="btnrow"><button class="b sm" id="conn" title="Nối các hình đang chọn thành chuỗi (trái → phải)">Nối các hình</button></div><label>Tự bố trí</label><div class="btnrow"><button class="b alt sm" data-lay="tree" title="Cây: theo đường nối, gốc bên trái">🌳 Cây</button><button class="b alt sm" data-lay="ring" title="Vòng: xếp đều quanh tâm">◯ Vòng</button><button class="b alt sm" data-lay="grid" title="Lưới: xếp hàng ngay ngắn">▦ Lưới</button></div>`;
     h += alignHTML(nu === 1, nu >= 3);
+    h += this.toolsHTML(list);
     h += this.colorHTML(list, false);
     h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button><button class="b alt sm" id="cvt">Chuyển thành đường</button></div>`;
     P.innerHTML = h;
     wireAlign(P, st);
+    this.wireTools();
     P.querySelector<HTMLButtonElement>('#cvt')?.addEventListener('click', () => st.convertToPath());
     P.querySelector<HTMLButtonElement>('#conn')?.addEventListener('click', () => st.connectSelection());
     P.querySelectorAll<HTMLButtonElement>('[data-lay]').forEach((b) => (b.onclick = () => st.autoLayout(b.dataset.lay as any)));
@@ -265,5 +288,61 @@ export class PropsPanel {
     const cf = $<HTMLInputElement>(P, 'cf'); cf.oninput = () => { s.fill = cf.value; redraw(); }; cf.onchange = () => st.commit();
     P.querySelectorAll<HTMLButtonElement>('[data-sw]').forEach((b) => (b.onclick = () => { s.fill = b.dataset.sw!; st.commit(); this.build(); redraw(); }));
     $(P, 'dl').onclick = () => st.remove();
+  }
+
+  /* ---------- Tạo hình phức tạp: kết hợp, lặp, đối xứng, góc, đường viền ---------- */
+
+  private toolsHTML(list: Shape[]) {
+    const solids = list.filter((x) => canConvertToPath(x) || x.t === 'path');
+    if (!list.some((x) => !isConnector(x))) return '';
+    let h = '';
+    if (solids.length >= 2)
+      h += `<div class="grp">Kết hợp hình</div><div class="bool">${BOOL.map(([k, l, i]) => `<button class="b alt" data-bool="${k}" title="${l} các hình đang chọn">${i}<span>${l}</span></button>`).join('')}</div><p class="hint">Màu lấy theo hình nằm dưới cùng. <b>Trừ</b>: hình dưới cùng trừ đi các hình phía trên.</p>`;
+    const a = this.arr, ring = a.kind === 'ring';
+    h += `<div class="grp">Lặp & đối xứng</div><div class="btnrow" style="margin-top:0"><button class="b alt sm" data-mir="h" title="Tạo bản lật trái–phải, đặt sát bên phải">⇋ Gương ngang</button><button class="b alt sm" data-mir="v" title="Tạo bản lật trên–dưới, đặt sát bên dưới">⇅ Gương dọc</button></div>`;
+    h += `<div class="r3"><div><label>Mảng</label><select id="akind" style="width:100%">${([['row', 'Hàng ngang'], ['col', 'Hàng dọc'], ['grid', 'Lưới'], ['ring', 'Vòng tròn']] as const).map(([v, l]) => `<option value="${v}"${a.kind === v ? ' selected' : ''}>${l}</option>`).join('')}</select></div><div><label>Số bản</label><input type="number" id="acount" min="2" max="200" value="${a.count}"></div><div><label>${ring ? 'Bán kính' : 'Khoảng cách'}</label><input type="number" id="agap" value="${ring ? a.radius : a.gap}"></div></div>`;
+    if (ring) h += `<label><input type="checkbox" id="arot" ${a.rotate ? 'checked' : ''}> Xoay theo vòng</label>`;
+    h += `<div class="btnrow"><button class="b sm" id="amake">Tạo mảng</button></div>`;
+    if (solids.length)
+      h += `<div class="grp">Góc & đường viền</div><div class="r2"><div><label>Bo / vát (px)</label><input type="number" id="cdist" min="1" value="${this.cdist}"></div><div><label>Phình / co (px)</label><input type="number" id="odist" min="1" value="${this.odist}"></div></div><div class="btnrow"><button class="b alt sm" data-corner="round" title="Bo tròn mọi góc nhọn">◜ Bo góc</button><button class="b alt sm" data-corner="chamfer" title="Vát xéo mọi góc nhọn">◸ Vát góc</button><button class="b alt sm" data-off="1">⊕ Phình ra</button><button class="b alt sm" data-off="-1">⊖ Co vào</button></div><p class="hint">Đang sửa điểm neo và đã chọn một điểm thì chỉ bo/vát góc đó. Hình sẽ được chuyển thành đường.</p>`;
+    return h;
+  }
+
+  private wireTools() {
+    const P = this.root, st = this.store, q = <T extends HTMLElement>(id: string) => P.querySelector<T>('#' + id);
+    P.querySelectorAll<HTMLButtonElement>('[data-bool]').forEach((b) => (b.onclick = () => {
+      const r = st.booleanOp(b.dataset.bool as any);
+      if (r === -1) this.onMsg('Kết quả rỗng: các hình không chồng lên nhau theo cách này.');
+      else if (r === 0) this.onMsg('Cần chọn ít nhất 2 hình.');
+    }));
+    P.querySelectorAll<HTMLButtonElement>('[data-mir]').forEach((b) => (b.onclick = () => st.mirrorCopy(b.dataset.mir as 'h' | 'v')));
+    const kind = q<HTMLSelectElement>('akind'), count = q<HTMLInputElement>('acount'), gap = q<HTMLInputElement>('agap'), rot = q<HTMLInputElement>('arot');
+    const keep = (e: HTMLInputElement | null, f: (v: number) => void) => { if (e) { e.onkeydown = (ev) => ev.stopPropagation(); e.onchange = () => { const v = parseFloat(e.value); if (isFinite(v)) f(v); }; } };
+    if (kind) kind.onchange = () => { this.arr.kind = kind.value as ArrayKind; this.build(); };
+    keep(count, (v) => (this.arr.count = Math.max(2, Math.min(200, Math.round(v)))));
+    keep(gap, (v) => { if (this.arr.kind === 'ring') this.arr.radius = Math.max(1, v); else this.arr.gap = v; });
+    if (rot) rot.onchange = () => (this.arr.rotate = rot.checked);
+    const make = q('amake');
+    if (make) make.onclick = () => {
+      // đọc lại ô số phòng khi người dùng chưa rời ô
+      const c = parseFloat(count!.value), g = parseFloat(gap!.value);
+      if (isFinite(c)) this.arr.count = Math.max(2, Math.min(200, Math.round(c)));
+      if (isFinite(g)) { if (this.arr.kind === 'ring') this.arr.radius = Math.max(1, g); else this.arr.gap = g; }
+      const a = this.arr, n = st.makeArray(a.kind, a.count, a.kind === 'ring' ? a.radius : a.gap, { rotate: a.rotate });
+      if (n) this.onMsg(`Đã tạo ${n} bản sao và nhóm lại (Ctrl+Shift+G để bỏ nhóm).`);
+    };
+    const cd = q<HTMLInputElement>('cdist'), od = q<HTMLInputElement>('odist');
+    keep(cd, (v) => (this.cdist = Math.max(1, v)));
+    keep(od, (v) => (this.odist = Math.max(1, v)));
+    P.querySelectorAll<HTMLButtonElement>('[data-corner]').forEach((b) => (b.onclick = () => {
+      const v = parseFloat(cd!.value); if (isFinite(v)) this.cdist = Math.max(1, v);
+      const ref = this.getNodeSel();
+      const n = st.cornerSelection(b.dataset.corner as 'round' | 'chamfer', this.cdist, ref ? [ref] : undefined);
+      this.onMsg(n ? `Đã ${b.dataset.corner === 'round' ? 'bo' : 'vát'} ${n} góc.` : 'Không có góc nhọn nào giữa hai cạnh thẳng để xử lý.');
+    }));
+    P.querySelectorAll<HTMLButtonElement>('[data-off]').forEach((b) => (b.onclick = () => {
+      const v = parseFloat(od!.value); if (isFinite(v)) this.odist = Math.max(1, v);
+      if (!st.offsetSelection(+b.dataset.off! * this.odist)) this.onMsg('Co vào quá nhiều: hình biến mất nên không đổi.');
+    }));
   }
 }

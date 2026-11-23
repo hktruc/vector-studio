@@ -41,6 +41,8 @@ export function startApp() {
   const toast = $('toast');
   canvas.onPathEdit = (id) => { toast.textContent = id !== null ? 'Đang sửa điểm neo: kéo điểm/tay nắm, kéo cạnh để uốn, bấm đúp cạnh để thêm điểm · Esc để xong' : ''; toast.hidden = id === null; };
   props.onEditPath = (id) => canvas.enterPathEdit(id);
+  props.onMsg = (t) => msg(t);
+  props.getNodeSel = () => (canvas.editPathId !== null ? canvas.nodeSel : null);
   canvas.onArm = (it) => { toast.textContent = it ? `Kéo trên khung để vẽ “${it.n}” (Shift: giữ tỉ lệ) · Esc để thôi` : ''; toast.hidden = !it; };
 
   // ô "gõ để thêm": bấm đúp chỗ trống hoặc phím /
