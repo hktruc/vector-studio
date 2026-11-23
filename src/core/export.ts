@@ -3,6 +3,7 @@ import { f, rad } from './geometry';
 import { mix } from './color';
 import { bboxOf, shapeTransform } from './transform';
 import { partsOf } from '../shapes/registry';
+import { LINE_HEIGHT, contrastText, fitText } from './text';
 
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
@@ -37,13 +38,31 @@ export function shapeToSVG(s: Shape, idPrefix = 'vsg'): string {
   };
   const inner = parts
     .map((pt) =>
-      pt.text
+      pt.img
+        ? `<image href="${esc(s.p.href)}" x="0" y="0" width="${f(s.w)}" height="${f(s.h)}" preserveAspectRatio="none"/>`
+        : pt.text
         ? `<text x="${f(s.w / 2)}" y="${f(s.h / 2 + s.p.size * 0.35)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${s.p.size}" font-weight="${s.p.bold ? 700 : 400}" fill="${paint(0)}">${esc(s.p.text)}</text>`
         : `<path d="${pt.d}" fill="${paint(pt.shade || 0)}"${pt.rule ? ` fill-rule="${pt.rule}"` : ''}${stroke}/>`,
     )
     .join('');
   const defsSVG = defs.size ? `<defs>${[...defs].map(([sh, id]) => gradientDef(s, id, sh)).join('')}</defs>` : '';
-  return `<g transform="${shapeTransform(s)}"${op}>${defsSVG}${inner}</g>`;
+  return `<g transform="${shapeTransform(s)}"${op}>${defsSVG}${inner}${labelSVG(s)}</g>`;
+}
+
+/**
+ * Chữ gõ trên hình: căn giữa, tự co cỡ vừa khung, xuất dạng <text> (Canva đổi được font).
+ * Bọc trong scale(fx fy) để chữ không bị lật ngược khi hình bị lật.
+ */
+export function labelSVG(s: Shape): string {
+  const t = (s.label ?? '').trim();
+  if (!t || s.t === 'text' || s.t === 'connector' || s.t === 'image') return '';
+  // hình tròn, đa giác, sao…: vùng đặt chữ hẹp hơn khung bao nên chừa lề rộng hơn
+  const pad = ['pie', 'ngon', 'star', 'diamond', 'tri', 'rtri', 'plus', 'circarrow'].includes(s.t) ? 0.2 : 0.1;
+  const { size, lines } = fitText(t, s.w, s.h, { bold: true, pad });
+  const color = s.lc || contrastText(s.fill);
+  const lh = size * LINE_HEIGHT, y0 = -((lines.length - 1) * lh) / 2 + size * 0.35;
+  const spans = lines.map((l, i) => `<tspan x="0" y="${f(y0 + i * lh)}">${esc(l)}</tspan>`).join('');
+  return `<g transform="translate(${f(s.w / 2)} ${f(s.h / 2)}) scale(${s.fx} ${s.fy})"><text text-anchor="middle" font-family="Arial, sans-serif" font-size="${size}" font-weight="700" fill="${color}">${spans}</text></g>`;
 }
 
 /** Nhiều hình -> SVG; các hình cùng nhóm (liền nhau, cùng gid) được bọc chung một thẻ <g>. */

@@ -4,13 +4,14 @@ import { circleShapes } from './circles';
 import { arrowShapes } from './arrows';
 import { blockShapes } from './blocks';
 import { textShapes } from './text';
+import { connectorShapes } from './connector';
 
 let done = false;
 /** Đăng ký toàn bộ loại hình có sẵn. Gọi một lần khi khởi động (an toàn khi gọi lại). */
 export function registerBuiltinShapes(): void {
   if (done) return;
   done = true;
-  [...basicShapes, ...circleShapes, ...arrowShapes, ...blockShapes, ...textShapes].forEach(defineShape);
+  [...basicShapes, ...circleShapes, ...arrowShapes, ...blockShapes, ...textShapes, ...connectorShapes].forEach(defineShape);
 }
 export * from './registry';
 export { LIBRARY } from './catalog';
@@ -23,3 +24,4 @@ export function shapeLabel(s: Pick<Shape, 't' | 'name'>): string {
   for (const g of LIB) for (const it of g.items) if (it.t === s.t) return it.n;
   return s.t;
 }
+export { searchLibrary, libItem, fold } from './search';

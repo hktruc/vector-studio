@@ -12,13 +12,13 @@
   <label>Khung <select id="csize"></select></label>
   <label title="Hình bám theo lưới 10px khi kéo. Giữ Alt để tạm tắt mọi bắt điểm."><input type="checkbox" id="snap"> Bắt lưới</label>
   <label title="Hiện đường gióng và tự hít vào cạnh/tâm hình khác khi kéo (giữ Alt để tạm tắt)"><input type="checkbox" id="guides" checked> Đường gióng</label>
-  <label><input type="checkbox" id="transp" checked> Nền trong suốt khi xuất</label>
+  <label><input type="checkbox" id="transp" checked> Nền trong suốt</label>
   <span style="flex:1"></span>
   <button class="b alt sm" id="undo">↶ Hoàn tác</button>
   <button class="b alt sm" id="redo">↷ Làm lại</button>
   <button class="b alt sm" id="clr">Xóa hết</button>
   <label title="SVG: hình vector, đổi màu được trong Canva. PNG: ảnh thường, dùng được ở mọi nơi; 2x/4x nét hơn khi phóng to.">Xuất <select id="fmt"><option value="svg">SVG (vector)</option><option value="1">PNG 1x</option><option value="2">PNG 2x</option><option value="4">PNG 4x</option></select></label>
-  <button class="b alt" id="exSel">Tải hình đang chọn</button>
+  <button class="b alt" id="exSel" title="Tải các hình đang chọn">Tải hình chọn</button>
   <button class="b" id="exAll">Tải cả khung</button>
   <span id="msg"></span>
 </header>
@@ -28,7 +28,13 @@
     <div id="lib"></div>
     <div id="layers" hidden></div>
   </aside>
-  <section id="wrapC"><svg id="stage"></svg></section>
+  <section id="wrapC">
+    <svg id="stage" aria-label="Khung vẽ"></svg>
+    <div id="toast" class="toast" hidden></div>
+    <div class="zoombar" aria-label="Thu phóng">
+      <button id="zout" title="Thu nhỏ (Ctrl −)">−</button><button id="zpct" title="Về 100% (Ctrl 1)">100%</button><button id="zin" title="Phóng to (Ctrl +)">+</button><button id="zfit" title="Vừa trang (Ctrl 0)">Vừa trang</button>
+    </div>
+  </section>
   <aside id="props" class="pr"></aside>
 </main>
 <div id="codeBox"><b>Mã SVG</b> – sao chép rồi lưu thành file .svg hoặc dán vào Canva<textarea id="code" readonly></textarea><div class="btnrow"><button class="b sm" id="cpCode">Sao chép</button><button class="b alt sm" id="closeCode">Đóng</button></div></div>

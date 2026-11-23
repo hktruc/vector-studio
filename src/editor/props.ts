@@ -3,11 +3,12 @@ import { getShape } from '../shapes/registry';
 import type { Shape } from '../core/types';
 import type { BrandPalette } from '../core/palette';
 import { mix } from '../core/color';
+import { isConnector } from '../core/connect';
 
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const $ = <T extends HTMLElement>(root: HTMLElement, id: string) => root.querySelector<T>('#' + id)!;
 
-const HELP = `<div class="empty"><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Lớp:</b> thẻ <b>Lớp</b> ở cột trái để đổi tên, ẩn, khóa. Ctrl+Shift+H ẩn · Ctrl+Shift+L khóa hình đang chọn.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
+const HELP = `<div class="empty"><b>Đổ ý ra nhanh</b><br>• <b>Bấm đúp</b> chỗ trống (hoặc phím <b>/</b>) rồi gõ “tròn”, “mũi tên”… Enter. Gõ chữ bất kỳ để thêm chữ.<br>• <b>Kéo</b> hình từ cột trái thả vào khung; <b>nhấn giữ</b> hình rồi kéo trên khung để vẽ đúng cỡ. Phím <b>R</b> chữ nhật · <b>O</b> tròn · <b>A</b> mũi tên · <b>T</b> chữ · <b>L</b> đường kẻ.<br>• <b>Bấm đúp vào hình</b> (hoặc Enter) để gõ chữ lên hình. Khi gõ, nhấn <b>Tab</b> để tạo ý tiếp theo đã nối sẵn.<br>• Dán ảnh, mã SVG, hay danh sách chữ (Ctrl+V) thẳng vào khung.<br>• Ctrl + cuộn chuột để thu phóng, giữ phím cách rồi kéo để dời khung nhìn.<br><br><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Lớp:</b> thẻ <b>Lớp</b> ở cột trái để đổi tên, ẩn, khóa. Ctrl+Shift+H ẩn · Ctrl+Shift+L khóa hình đang chọn.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
 
 /* Biểu tượng 16×16 cho các nút căn chỉnh */
 const ic = (body: string) => `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">${body}</svg>`;
@@ -64,14 +65,19 @@ export class PropsPanel {
     if (!s) { if (st.sel.length) this.buildMulti(); else P.innerHTML = HELP; return; }
     const def = getShape(s.t);
     const redraw = () => st.emitChange();
-    let h = `<div class="grp">Vị trí & kích thước</div><div class="r3"><div><label>X</label><input type="number" id="nx"></div><div><label>Y</label><input type="number" id="ny"></div><div><label>Xoay °</label><input type="number" id="nr"></div></div><div class="r2"><div><label>Rộng</label><input type="number" id="nw"></div><div><label>Cao</label><input type="number" id="nh"></div></div>`;
+    if (isConnector(s)) return this.buildConnector(s);
+    let h = s.t === 'text' || s.t === 'image' ? '' : `<div class="grp">Chữ trên hình</div><textarea id="lbl" rows="2" placeholder="Bấm đúp vào hình để gõ trực tiếp">${esc(s.label ?? '')}</textarea><div class="r2"><div><label>Màu chữ</label><input type="color" id="lc" value="${s.lc || '#ffffff'}"></div><div><label>&nbsp;</label><button class="b alt sm" id="lcauto" ${s.lc ? '' : 'disabled'}>Màu tự động</button></div></div><p class="hint">Chữ tự co vừa khung. Tab khi đang gõ: tạo ý tiếp theo đã nối.</p>`;
+    h += `<div class="grp">Vị trí & kích thước</div><div class="r3"><div><label>X</label><input type="number" id="nx"></div><div><label>Y</label><input type="number" id="ny"></div><div><label>Xoay °</label><input type="number" id="nr"></div></div><div class="r2"><div><label>Rộng</label><input type="number" id="nw"></div><div><label>Cao</label><input type="number" id="nh"></div></div>`;
     h += alignHTML(true, false);
-    h += this.colorHTML([s], true);
+    h += s.t === 'image'
+      ? `<div class="grp">Ảnh</div><label>Độ trong suốt <span id="opv">${Math.round(s.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${s.op}">`
+      : this.colorHTML([s], true);
     if (def.params.length) {
       h += `<div class="grp">Thông số hình</div>`;
       for (const q of def.params) {
         if (q.type === 'text') h += `<label>${q.l}</label><input type="text" data-p="${q.k}" value="${esc(s.p[q.k])}">`;
         else if (q.type === 'check') h += `<label><input type="checkbox" data-p="${q.k}" ${s.p[q.k] ? 'checked' : ''}> ${q.l}</label>`;
+        else if (q.type === 'select') h += `<label>${q.l}</label><select data-p="${q.k}" style="width:100%">${(q.opts || []).map(([v, l]) => `<option value="${v}"${s.p[q.k] === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
         else h += `<label>${q.l} <span id="pv_${q.k}">${s.p[q.k]}</span></label><input type="range" data-p="${q.k}" min="${q.min}" max="${q.max}" step="${q.step}" value="${s.p[q.k]}">`;
       }
     }
@@ -80,6 +86,14 @@ export class PropsPanel {
     P.innerHTML = h;
     wireAlign(P, st);
     this.syncNumbers();
+    const lbl = P.querySelector<HTMLTextAreaElement>('#lbl');
+    if (lbl) {
+      lbl.onchange = () => st.setLabel(s.id, lbl.value);
+      lbl.onkeydown = (e) => e.stopPropagation();
+      const lc = $<HTMLInputElement>(P, 'lc');
+      lc.oninput = () => { s.lc = lc.value; redraw(); }; lc.onchange = () => { st.commit(); this.build(); };
+      $(P, 'lcauto').onclick = () => { delete s.lc; st.commit(); this.build(); redraw(); };
+    }
 
     const num = (id: string, k: 'x' | 'y' | 'r' | 'w' | 'h', fn?: (v: number) => number) => {
       const e = $<HTMLInputElement>(P, id);
@@ -90,9 +104,13 @@ export class PropsPanel {
     num('nr', 'r', (v) => ((v % 360) + 360) % 360);
     num('nw', 'w', (v) => Math.max(6, v)); num('nh', 'h', (v) => Math.max(6, v));
 
-    this.wireColors([s], true);
+    if (s.t === 'image') {
+      const op = $<HTMLInputElement>(P, 'op');
+      op.oninput = () => { s.op = +op.value; $(P, 'opv').textContent = Math.round(s.op * 100) + '%'; redraw(); }; op.onchange = () => st.commit();
+    } else this.wireColors([s], true);
 
-    P.querySelectorAll<HTMLInputElement>('[data-p]').forEach((e) => {
+    P.querySelectorAll<HTMLSelectElement>('select[data-p]').forEach((e) => { e.onchange = () => { s.p[e.dataset.p!] = e.value; st.commit(); redraw(); }; });
+    P.querySelectorAll<HTMLInputElement>('input[data-p]').forEach((e) => {
       const k = e.dataset.p!;
       if (e.type === 'range') { e.oninput = () => { s.p[k] = +e.value; $(P, 'pv_' + k).textContent = e.value; redraw(); }; e.onchange = () => st.commit(); }
       else if (e.type === 'checkbox') e.onchange = () => { s.p[k] = e.checked ? 1 : 0; st.commit(); redraw(); };
@@ -114,11 +132,15 @@ export class PropsPanel {
     if (anyGroup) h += `<button class="b alt sm" id="ugrp">Bỏ nhóm (Ctrl+Shift+G)</button>`;
     h += `</div><p class="hint">Kéo để dời cả ${grouped ? 'nhóm' : 'vùng chọn'} · kéo ô vuông ở góc để phóng to/thu nhỏ đều · kéo chấm tròn để xoay. Bấm một hình trong vùng chọn (không kéo) để chọn riêng nó.</p>`;
     const nu = st.selectionUnits;
+    const shapesN = list.filter((x) => !isConnector(x)).length;
+    if (shapesN >= 2) h += `<div class="grp">Sơ đồ</div><div class="btnrow"><button class="b sm" id="conn" title="Nối các hình đang chọn thành chuỗi (trái → phải)">Nối các hình</button></div><label>Tự bố trí</label><div class="btnrow"><button class="b alt sm" data-lay="tree" title="Cây: theo đường nối, gốc bên trái">🌳 Cây</button><button class="b alt sm" data-lay="ring" title="Vòng: xếp đều quanh tâm">◯ Vòng</button><button class="b alt sm" data-lay="grid" title="Lưới: xếp hàng ngay ngắn">▦ Lưới</button></div>`;
     h += alignHTML(nu === 1, nu >= 3);
     h += this.colorHTML(list, false);
     h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button></div>`;
     P.innerHTML = h;
     wireAlign(P, st);
+    P.querySelector<HTMLButtonElement>('#conn')?.addEventListener('click', () => st.connectSelection());
+    P.querySelectorAll<HTMLButtonElement>('[data-lay]').forEach((b) => (b.onclick = () => st.autoLayout(b.dataset.lay as any)));
     P.querySelector<HTMLButtonElement>('#grp')?.addEventListener('click', () => st.group());
     P.querySelector<HTMLButtonElement>('#ugrp')?.addEventListener('click', () => st.ungroup());
     this.wireColors(list, false);
@@ -209,5 +231,25 @@ export class PropsPanel {
     op.oninput = () => { list.forEach((x) => (x.op = +op.value)); $(P, 'opv').textContent = Math.round(+op.value * 100) + '%'; redraw(); };
     op.onchange = () => st.commit();
     void single;
+  }
+
+  /** Bảng cho đường nối: kiểu đường, đầu mút, độ dày, màu. */
+  private buildConnector(s: Shape) {
+    const P = this.root, st = this.store, def = getShape(s.t);
+    let h = `<div class="grp">Đường nối</div><p class="hint" style="margin-top:0">Đường nối tự đi theo khi kéo hai hình. Xóa một hình thì đường nối cũng mất.</p>`;
+    for (const q of def.params) {
+      if (q.type === 'select') h += `<label>${q.l}</label><select data-p="${q.k}" style="width:100%">${(q.opts || []).map(([v, l]) => `<option value="${v}"${s.p[q.k] === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+      else h += `<label>${q.l} <span id="pv_${q.k}">${s.p[q.k]}</span></label><input type="range" data-p="${q.k}" min="${q.min}" max="${q.max}" step="${q.step}" value="${s.p[q.k]}">`;
+    }
+    h += `<div class="r2"><div><label>Màu</label><input type="color" id="cf" value="${s.fill}"></div><div></div></div>`;
+    h += `<label>Bộ màu thương hiệu</label><div class="pal">${this.palette.colors.map((c) => `<button class="sw" data-sw="${c}" title="${c}" style="background:${c}"></button>`).join('')}</div>`;
+    h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b red sm" id="dl">Xóa đường nối</button></div>`;
+    P.innerHTML = h;
+    const redraw = () => st.emitChange();
+    P.querySelectorAll<HTMLSelectElement>('select[data-p]').forEach((e) => { e.onchange = () => { s.p[e.dataset.p!] = e.value; st.commit(); redraw(); }; });
+    P.querySelectorAll<HTMLInputElement>('input[data-p]').forEach((e) => { const k = e.dataset.p!; e.oninput = () => { s.p[k] = +e.value; $(P, 'pv_' + k).textContent = e.value; redraw(); }; e.onchange = () => st.commit(); });
+    const cf = $<HTMLInputElement>(P, 'cf'); cf.oninput = () => { s.fill = cf.value; redraw(); }; cf.onchange = () => st.commit();
+    P.querySelectorAll<HTMLButtonElement>('[data-sw]').forEach((b) => (b.onclick = () => { s.fill = b.dataset.sw!; st.commit(); this.build(); redraw(); }));
+    $(P, 'dl').onclick = () => st.remove();
   }
 }

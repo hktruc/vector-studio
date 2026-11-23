@@ -5,7 +5,9 @@ export type ParamValue = number | string;
 export interface ParamDef {
   k: string;
   l: string; // nhãn hiển thị
-  type?: 'range' | 'text' | 'check';
+  type?: 'range' | 'text' | 'check' | 'select';
+  /** Lựa chọn cho type 'select': [giá trị, nhãn]. */
+  opts?: [string, string][];
   min?: number;
   max?: number;
   step?: number;
@@ -18,6 +20,8 @@ export interface Part {
   shade?: number; // -1..1: tối..sáng so với màu tô
   rule?: 'evenodd' | 'nonzero';
   text?: boolean;
+  /** Ảnh (dùng cho hình kiểu 'image'): vẽ thẻ <image> phủ cả khung hình. */
+  img?: boolean;
 }
 
 /** Định nghĩa một loại hình trong thư viện (xem docs/ADDING-A-SHAPE.md). */
@@ -55,6 +59,10 @@ export interface Shape {
   locked?: boolean;
   /** Màu chuyển sắc (gradient) từ `fill` sang `grad.c2`. Không có = màu đặc. */
   grad?: Gradient;
+  /** Chữ gõ trên hình (bấm đúp vào hình); tự co cỡ vừa khung. */
+  label?: string;
+  /** Màu chữ trên hình (không có = tự chọn trắng/đen theo màu tô). */
+  lc?: string;
 }
 
 export interface Gradient {
@@ -68,8 +76,9 @@ export interface Gradient {
  * Phiên bản định dạng dữ liệu hiện tại.
  * v2: thêm Shape.gid (nhóm hình). v3: thêm Shape.name/hidden/locked và Doc.gnames (tên nhóm).
  * v4: thêm Shape.grad (màu chuyển sắc).
+ * v5: thêm Shape.label/lc (chữ trên hình), loại hình 'connector' (đường nối) và 'image' (ảnh dán vào).
  */
-export const DOC_VERSION = 4;
+export const DOC_VERSION = 5;
 
 export interface Doc {
   v: typeof DOC_VERSION; // phiên bản định dạng dữ liệu
