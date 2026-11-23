@@ -42,10 +42,10 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 ## D. Tạo hình phức tạp từ hình đơn giản
 | Tính năng | TT |
 |---|---|
-| Boolean: hợp, trừ, giao, loại trừ | ⬜ |
-| Mảng: thẳng hàng, lưới, tròn, theo đường dẫn | ⬜ |
-| Đối xứng / gương | ⬜ |
-| Offset đường, bo / vát góc | ⬜ |
+| Boolean: hợp, trừ, giao, loại trừ | ✅ (tự viết, không thư viện ngoài; kết quả là đường sửa điểm được) |
+| Mảng: thẳng hàng, lưới, tròn, theo đường dẫn | ◐ (hàng, cột, lưới, vòng tròn có xoay; chưa có theo đường dẫn) |
+| Đối xứng / gương | ◐ (tạo bản gương ngang/dọc; chưa có đối xứng sống khi đang sửa) |
+| Offset đường, bo / vát góc | ✅ (phình/co; bo/vát mọi góc hoặc từng điểm neo) |
 | Symbol / component dùng lại (sửa mẫu, cả bản sao đổi) | ⬜ |
 
 ## E. Chính xác (tùy chọn, bật khi cần)

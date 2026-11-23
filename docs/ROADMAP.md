@@ -2,7 +2,7 @@
 
 > Bản đồ tính năng đầy đủ và thứ tự ưu tiên: [`FEATURE-MAP.md`](FEATURE-MAP.md). Mọi tính năng phải qua phép thử trong [`DESIGN-PRINCIPLES.md`](DESIGN-PRINCIPLES.md).
 
-Phiên bản hiện tại (0.9): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp, bộ màu thương hiệu + gradient, xuất PNG, nhóm A "đưa ý ra thành hình" (gõ để thêm, kéo thả, vẽ bằng kéo, chữ trên hình, Tab + đường nối, dán, khung vô hạn, tự bố trí).
+Phiên bản hiện tại (0.10): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp, bộ màu thương hiệu + gradient, xuất PNG, nhóm A "đưa ý ra thành hình" (gõ để thêm, kéo thả, vẽ bằng kéo, chữ trên hình, Tab + đường nối, dán, khung vô hạn, tự bố trí).
 
 Bản chạy thật: https://vector-studio.hktruc.workers.dev
 
@@ -22,7 +22,9 @@ Bản chạy thật: https://vector-studio.hktruc.workers.dev
 - [x] Tay nắm kéo trực tiếp trên hình (góc quạt, đầu mũi tên, bo góc, số tầng…)
 - [ ] Công cụ bút: vẽ đường tự do từng điểm
 - [ ] Nhập file SVG, tách thành hình sửa được
-- [ ] Phép toán hình (hợp, trừ, giao)
+- [x] Phép toán hình (hợp, trừ, giao, loại trừ)
+- [x] Mảng lặp (hàng, cột, lưới, vòng tròn), bản gương, bo/vát góc, phình/co đường viền
+- [ ] Symbol / component dùng lại (sửa mẫu, các bản sao đổi theo)
 - [x] Đường parabol/đường cong có đầu mút tùy chỉnh (Bézier chỉnh hai đầu độc lập, parabol một đỉnh, đầu mút tròn/bằng/mũi tên/chấm/nhọn, xuất hình đặc)
 
 ## Giai đoạn 3 – Web app hoàn chỉnh

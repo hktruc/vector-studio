@@ -59,6 +59,13 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - Xóa hình thì đường nối dính vào nó bị xóa theo.
 - Khung vẽ được dựng lại sau mỗi lần bấm, nên khi cần biết hình dưới con trỏ ở sự kiện `dblclick` thì dùng `document.elementFromPoint`, không dùng `e.target`.
 
+## Tạo hình phức tạp (nhóm D)
+- **Phép toán hình** (`core/boolean.ts`, không dùng thư viện ngoài): làm phẳng đường cong thành đa giác mịn (bước ~3px) → cắt mọi cạnh tại giao điểm (kể cả cạnh trùng nhau) → với mỗi đoạn nhỏ, thử hai điểm sát hai bên xem có thuộc kết quả không (winding number, tôn trọng nonzero/evenodd của từng mảnh) → giữ đoạn nằm trên ranh giới, quay chiều cho phần trong ở bên trái → nối thành vòng. Nhờ chiều nhất quán, lỗ thủng tô đúng với `nonzero`. Kết quả rút gọn điểm thẳng hàng (sai lệch ≤ 0.08px) và thành hình `path`.
+- Kiểm thử bằng **diện tích** (hợp + giao = tổng hai hình, v.v.) — cách chắc chắn nhất để biết phép toán đúng.
+- **Phình/co** = hợp/trừ với "dải" bao quanh đường viền (nét dày 2d, đầu tròn) → góc phình ra tự bo tròn.
+- **Bo/vát góc** (`cornerNodes` trong `core/pathedit.ts`): thay mỗi góc nhọn giữa hai cạnh thẳng bằng hai điểm; bo tròn dùng tay nắm 4/3·tan(φ/4)·R (cung tròn chuẩn).
+- **Mảng & gương** (`core/repeat.ts` tính vị trí; `DocStore.makeArray/mirrorCopy` dùng chung cơ chế dán `pasteRaw` nên đường nối, nhóm được sao đúng và chỉ ghi một mốc hoàn tác).
+
 ## Hình sống (nhóm C)
 - **Tay nắm thông số** (`ShapeDef.handles`, xử lý chung ở `core/handles.ts`): mỗi tay nắm có `pos` (vị trí theo tọa độ riêng 0..w × 0..h) và `drag` (điểm kéo → thông số mới). Giá trị tự được kẹp theo `min/max` và làm tròn theo `step` của `ParamDef`, nên `drag` chỉ cần tính "thô". Giao diện vẽ hình thoi vàng, không cần biết hình là gì (đúng quy tắc 2).
 - **Đường tự do** (`path`): `core/pathdata.ts` đọc/ghi `d` (M L H V C S Q T A Z, cung A đổi sang Bézier), `core/pathedit.ts` lo chuyển đổi và sửa điểm. Điểm neo lưu theo tỉ lệ khung; `orig` giữ hình gốc để "quay lại dạng thông số" khi `edited` còn false.
