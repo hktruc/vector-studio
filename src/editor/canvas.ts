@@ -8,6 +8,7 @@ import { snapToGuides, type Guide } from '../core/align';
 import { isConnector } from '../core/connect';
 import { fitText } from '../core/text';
 import { fitBox, panBy, stepZoom, toWorld, zoomAt, type Camera } from '../core/camera';
+import { curveHandles, placeCurve, setCurveHandle, type CurveKey } from '../core/curve';
 
 const NS = 'http://www.w3.org/2000/svg';
 const BLUE = '#1E6FB5';
@@ -21,7 +22,7 @@ function el(n: string, a: Record<string, string | number>, p?: Element) {
 const clone = (l: Shape[]): Shape[] => JSON.parse(JSON.stringify(l));
 const scaleParamsOf = (t: string) => getShape(t).scaleParams ?? [];
 /** Mẫu hình vẽ theo hướng kéo (mũi tên, đường kẻ) thay vì theo khung chữ nhật. */
-export const isDirectional = (it: LibItem) => it.t === 'arrow' || it.t === 'dblarrow' || it.n === 'Đường kẻ';
+export const isDirectional = (it: LibItem) => it.t === 'arrow' || it.t === 'dblarrow' || it.t === 'curve' || it.n === 'Đường kẻ';
 
 type Pt = { x: number; y: number };
 type Drag =
@@ -39,6 +40,8 @@ type Drag =
   | { mode: 'draw'; start: Pt; cur: Pt; it: LibItem; moved: boolean; shift: boolean }
   /** kéo khung nhìn (Space + kéo, chuột giữa) */
   | { mode: 'pan'; sx: number; sy: number; cam0: Camera; moved: boolean }
+  /** kéo tay nắm của đường cong (đầu mút, hướng, đỉnh) */
+  | { mode: 'curve'; key: CurveKey; start: Pt; moved: boolean }
   /** hai ngón tay: thu phóng + kéo khung nhìn */
   | { mode: 'pinch'; d0: number; m0: Pt; cam0: Camera; moved: boolean };
 
@@ -172,7 +175,7 @@ export class EditorCanvas {
     }
     const one = this.store.selected, list = this.store.selection;
     if (one && isConnector(one)) this.drawConnectorSel(one);
-    else if (one) this.drawSelection(one);
+    else if (one) { this.drawSelection(one); if (one.t === 'curve') this.drawCurveHandles(one); }
     else if (list.length) this.drawMulti(list);
     for (const g of this.guides) {
       const [x1, y1, x2, y2] = g.dir === 'v' ? [g.at, g.a, g.at, g.b] : [g.a, g.at, g.b, g.at];
@@ -198,6 +201,24 @@ export class EditorCanvas {
     const hand: [number, number, string][] = [[-1, -1, 'nwse'], [0, -1, 'ns'], [1, -1, 'nesw'], [1, 0, 'ew'], [1, 1, 'nwse'], [0, 1, 'ns'], [-1, 1, 'nesw'], [-1, 0, 'ew']];
     for (const [a, b, c] of hand)
       el('rect', { x: (a * s.w) / 2 - hs / 2, y: (b * s.h) / 2 - hs / 2, width: hs, height: hs, fill: '#fff', stroke: BLUE, 'stroke-width': 1.6 * k, 'data-h': `${a},${b}`, style: `cursor:${c}-resize` }, g);
+  }
+
+  /** Tay nắm đường cong: chấm tròn ở hai đầu mút, hình thoi ở điểm điều khiển (kéo để đổi hướng/độ cong). */
+  private drawCurveHandles(s: Shape) {
+    const k = 1 / this.cam.z, hd = curveHandles(s), svg = this.svg;
+    const line = (a?: number[], b?: number[]) => a && b && el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: BLUE, 'stroke-width': k, 'stroke-dasharray': `${3 * k} ${3 * k}`, 'pointer-events': 'none' }, svg);
+    if (hd.q) { line(hd.p0, hd.q); line(hd.p3, hd.q); } else { line(hd.p0, hd.c1); line(hd.p3, hd.c2); }
+    for (const key of ['c1', 'c2', 'q'] as const) {
+      const p = hd[key]; if (!p) continue;
+      const r = 6 * k;
+      el('path', { d: `M${p[0]} ${p[1] - r}L${p[0] + r} ${p[1]}L${p[0]} ${p[1] + r}L${p[0] - r} ${p[1]}Z`, fill: '#fff', stroke: GUIDE, 'stroke-width': 2 * k, 'data-ch': key, style: 'cursor:move' }, svg)
+        .appendChild(Object.assign(document.createElementNS(NS, 'title'), { textContent: key === 'q' ? 'Kéo để đổi đỉnh parabol' : 'Kéo để đổi hướng và độ cong ở đầu này' }));
+    }
+    for (const key of ['p0', 'p3'] as const) {
+      const p = hd[key]!;
+      el('circle', { cx: p[0], cy: p[1], r: 6.5 * k, fill: BLUE, stroke: '#fff', 'stroke-width': 2 * k, 'data-ch': key, style: 'cursor:move' }, svg)
+        .appendChild(Object.assign(document.createElementNS(NS, 'title'), { textContent: 'Kéo để dời đầu mút' }));
+    }
   }
 
   /** Đường nối đang chọn: tô sáng đường đi (đường nối tự đi theo hình nên không có tay nắm). */
@@ -257,6 +278,8 @@ export class EditorCanvas {
       return;
     }
     const t = e.target as Element;
+    const ch = t.getAttribute?.('data-ch') as CurveKey | null;
+    if (ch && st.selected?.t === 'curve') { this.drag = { mode: 'curve', key: ch, start: p, moved: false }; capture(); return; }
     const h = t.getAttribute?.('data-h');
     const sidEl = t.closest?.('[data-sid]');
 
@@ -319,7 +342,10 @@ export class EditorCanvas {
       return;
     }
     d.moved = true;
-    if (d.mode === 'move') {
+    if (d.mode === 'curve') {
+      const s = this.store.selected; if (!s) return;
+      setCurveHandle(s, d.key, this.sn(p.x), this.sn(p.y));
+    } else if (d.mode === 'move') {
       if (!d.list.length) return;
       // ưu tiên đường gióng (thẳng hàng với hình khác/trang); trục nào không bắt được thì bắt lưới theo tâm hình đầu tiên
       const a = d.s0[0], rx = p.x - d.start.x, ry = p.y - d.start.y;
@@ -401,6 +427,8 @@ export class EditorCanvas {
   private finishDraw(d: Extract<Drag, { mode: 'draw' }>) {
     const r = this.drawResult(d);
     const s = this.store.addFromLibrary(d.it, r.at, r.size, r.rot);
+    // đường cong: hai đầu mút đặt đúng điểm bắt đầu và kết thúc kéo
+    if (s.t === 'curve' && d.moved) { s.r = 0; placeCurve(s, d.start, d.cur); this.store.commit(); this.store.emitChange(); }
     this.arm(null);
     if (s.t === 'text') this.editLabel(s.id);
   }
@@ -413,7 +441,7 @@ export class EditorCanvas {
     const sidEl = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('[data-sid]');
     if (sidEl) {
       const s = this.store.doc.shapes.find((x) => x.id === Number(sidEl.getAttribute('data-sid')));
-      if (s && !isConnector(s) && s.t !== 'image') this.editLabel(s.id);
+      if (s && !isConnector(s) && s.t !== 'image' && s.t !== 'curve') this.editLabel(s.id);
       return;
     }
     this.onDoubleClickEmpty(this.toCanvas(e), e.clientX, e.clientY);

@@ -5,13 +5,14 @@ import { arrowShapes } from './arrows';
 import { blockShapes } from './blocks';
 import { textShapes } from './text';
 import { connectorShapes } from './connector';
+import { curveShapes } from './curves';
 
 let done = false;
 /** Đăng ký toàn bộ loại hình có sẵn. Gọi một lần khi khởi động (an toàn khi gọi lại). */
 export function registerBuiltinShapes(): void {
   if (done) return;
   done = true;
-  [...basicShapes, ...circleShapes, ...arrowShapes, ...blockShapes, ...textShapes, ...connectorShapes].forEach(defineShape);
+  [...basicShapes, ...circleShapes, ...arrowShapes, ...blockShapes, ...textShapes, ...connectorShapes, ...curveShapes].forEach(defineShape);
 }
 export * from './registry';
 export { LIBRARY } from './catalog';

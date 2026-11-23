@@ -8,7 +8,7 @@ import { isConnector } from '../core/connect';
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const $ = <T extends HTMLElement>(root: HTMLElement, id: string) => root.querySelector<T>('#' + id)!;
 
-const HELP = `<div class="empty"><b>Đổ ý ra nhanh</b><br>• <b>Bấm đúp</b> chỗ trống (hoặc phím <b>/</b>) rồi gõ “tròn”, “mũi tên”… Enter. Gõ chữ bất kỳ để thêm chữ.<br>• <b>Kéo</b> hình từ cột trái thả vào khung; <b>nhấn giữ</b> hình rồi kéo trên khung để vẽ đúng cỡ. Phím <b>R</b> chữ nhật · <b>O</b> tròn · <b>A</b> mũi tên · <b>T</b> chữ · <b>L</b> đường kẻ.<br>• <b>Bấm đúp vào hình</b> (hoặc Enter) để gõ chữ lên hình. Khi gõ, nhấn <b>Tab</b> để tạo ý tiếp theo đã nối sẵn.<br>• Dán ảnh, mã SVG, hay danh sách chữ (Ctrl+V) thẳng vào khung.<br>• Ctrl + cuộn chuột để thu phóng, giữ phím cách rồi kéo để dời khung nhìn.<br><br><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Lớp:</b> thẻ <b>Lớp</b> ở cột trái để đổi tên, ẩn, khóa. Ctrl+Shift+H ẩn · Ctrl+Shift+L khóa hình đang chọn.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
+const HELP = `<div class="empty"><b>Đổ ý ra nhanh</b><br>• <b>Bấm đúp</b> chỗ trống (hoặc phím <b>/</b>) rồi gõ “tròn”, “mũi tên”… Enter. Gõ chữ bất kỳ để thêm chữ.<br>• <b>Kéo</b> hình từ cột trái thả vào khung; <b>nhấn giữ</b> hình rồi kéo trên khung để vẽ đúng cỡ. Phím <b>R</b> chữ nhật · <b>O</b> tròn · <b>A</b> mũi tên · <b>T</b> chữ · <b>L</b> đường kẻ · <b>C</b> đường cong.<br>• <b>Đường cong:</b> chọn đường cong rồi kéo chấm xanh (đầu mút) hoặc hình thoi hồng (hướng, độ cong từng đầu) ngay trên khung.<br>• <b>Bấm đúp vào hình</b> (hoặc Enter) để gõ chữ lên hình. Khi gõ, nhấn <b>Tab</b> để tạo ý tiếp theo đã nối sẵn.<br>• Dán ảnh, mã SVG, hay danh sách chữ (Ctrl+V) thẳng vào khung.<br>• Ctrl + cuộn chuột để thu phóng, giữ phím cách rồi kéo để dời khung nhìn.<br><br><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Lớp:</b> thẻ <b>Lớp</b> ở cột trái để đổi tên, ẩn, khóa. Ctrl+Shift+H ẩn · Ctrl+Shift+L khóa hình đang chọn.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
 
 /* Biểu tượng 16×16 cho các nút căn chỉnh */
 const ic = (body: string) => `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">${body}</svg>`;
@@ -66,7 +66,7 @@ export class PropsPanel {
     const def = getShape(s.t);
     const redraw = () => st.emitChange();
     if (isConnector(s)) return this.buildConnector(s);
-    let h = s.t === 'text' || s.t === 'image' ? '' : `<div class="grp">Chữ trên hình</div><textarea id="lbl" rows="2" placeholder="Bấm đúp vào hình để gõ trực tiếp">${esc(s.label ?? '')}</textarea><div class="r2"><div><label>Màu chữ</label><input type="color" id="lc" value="${s.lc || '#ffffff'}"></div><div><label>&nbsp;</label><button class="b alt sm" id="lcauto" ${s.lc ? '' : 'disabled'}>Màu tự động</button></div></div><p class="hint">Chữ tự co vừa khung. Tab khi đang gõ: tạo ý tiếp theo đã nối.</p>`;
+    let h = s.t === 'text' || s.t === 'image' || s.t === 'curve' ? '' : `<div class="grp">Chữ trên hình</div><textarea id="lbl" rows="2" placeholder="Bấm đúp vào hình để gõ trực tiếp">${esc(s.label ?? '')}</textarea><div class="r2"><div><label>Màu chữ</label><input type="color" id="lc" value="${s.lc || '#ffffff'}"></div><div><label>&nbsp;</label><button class="b alt sm" id="lcauto" ${s.lc ? '' : 'disabled'}>Màu tự động</button></div></div><p class="hint">Chữ tự co vừa khung. Tab khi đang gõ: tạo ý tiếp theo đã nối.</p>`;
     h += `<div class="grp">Vị trí & kích thước</div><div class="r3"><div><label>X</label><input type="number" id="nx"></div><div><label>Y</label><input type="number" id="ny"></div><div><label>Xoay °</label><input type="number" id="nr"></div></div><div class="r2"><div><label>Rộng</label><input type="number" id="nw"></div><div><label>Cao</label><input type="number" id="nh"></div></div>`;
     h += alignHTML(true, false);
     h += s.t === 'image'
@@ -75,6 +75,7 @@ export class PropsPanel {
     if (def.params.length) {
       h += `<div class="grp">Thông số hình</div>`;
       for (const q of def.params) {
+        if (q.show && !q.show(s.p)) continue;
         if (q.type === 'text') h += `<label>${q.l}</label><input type="text" data-p="${q.k}" value="${esc(s.p[q.k])}">`;
         else if (q.type === 'check') h += `<label><input type="checkbox" data-p="${q.k}" ${s.p[q.k] ? 'checked' : ''}> ${q.l}</label>`;
         else if (q.type === 'select') h += `<label>${q.l}</label><select data-p="${q.k}" style="width:100%">${(q.opts || []).map(([v, l]) => `<option value="${v}"${s.p[q.k] === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
@@ -109,7 +110,7 @@ export class PropsPanel {
       op.oninput = () => { s.op = +op.value; $(P, 'opv').textContent = Math.round(s.op * 100) + '%'; redraw(); }; op.onchange = () => st.commit();
     } else this.wireColors([s], true);
 
-    P.querySelectorAll<HTMLSelectElement>('select[data-p]').forEach((e) => { e.onchange = () => { s.p[e.dataset.p!] = e.value; st.commit(); redraw(); }; });
+    P.querySelectorAll<HTMLSelectElement>('select[data-p]').forEach((e) => { e.onchange = () => { s.p[e.dataset.p!] = e.value; redraw(); st.commit(); this.build(); }; });
     P.querySelectorAll<HTMLInputElement>('input[data-p]').forEach((e) => {
       const k = e.dataset.p!;
       if (e.type === 'range') { e.oninput = () => { s.p[k] = +e.value; $(P, 'pv_' + k).textContent = e.value; redraw(); }; e.onchange = () => st.commit(); }
@@ -246,7 +247,7 @@ export class PropsPanel {
     h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b red sm" id="dl">Xóa đường nối</button></div>`;
     P.innerHTML = h;
     const redraw = () => st.emitChange();
-    P.querySelectorAll<HTMLSelectElement>('select[data-p]').forEach((e) => { e.onchange = () => { s.p[e.dataset.p!] = e.value; st.commit(); redraw(); }; });
+    P.querySelectorAll<HTMLSelectElement>('select[data-p]').forEach((e) => { e.onchange = () => { s.p[e.dataset.p!] = e.value; redraw(); st.commit(); this.build(); }; });
     P.querySelectorAll<HTMLInputElement>('input[data-p]').forEach((e) => { const k = e.dataset.p!; e.oninput = () => { s.p[k] = +e.value; $(P, 'pv_' + k).textContent = e.value; redraw(); }; e.onchange = () => st.commit(); });
     const cf = $<HTMLInputElement>(P, 'cf'); cf.oninput = () => { s.fill = cf.value; redraw(); }; cf.onchange = () => st.commit();
     P.querySelectorAll<HTMLButtonElement>('[data-sw]').forEach((b) => (b.onclick = () => { s.fill = b.dataset.sw!; st.commit(); this.build(); redraw(); }));

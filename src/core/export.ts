@@ -55,7 +55,7 @@ export function shapeToSVG(s: Shape, idPrefix = 'vsg'): string {
  */
 export function labelSVG(s: Shape): string {
   const t = (s.label ?? '').trim();
-  if (!t || s.t === 'text' || s.t === 'connector' || s.t === 'image') return '';
+  if (!t || s.t === 'text' || s.t === 'connector' || s.t === 'image' || s.t === 'curve') return '';
   // hình tròn, đa giác, sao…: vùng đặt chữ hẹp hơn khung bao nên chừa lề rộng hơn
   const pad = ['pie', 'ngon', 'star', 'diamond', 'tri', 'rtri', 'plus', 'circarrow'].includes(s.t) ? 0.2 : 0.1;
   const { size, lines } = fitText(t, s.w, s.h, { bold: true, pad });

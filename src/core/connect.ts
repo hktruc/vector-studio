@@ -14,7 +14,7 @@ import { f } from './geometry';
 export type XY = [number, number];
 export type Box = { x0: number; y0: number; x1: number; y1: number };
 export type ConnStyle = 'straight' | 'elbow' | 'curve';
-export type Cap = 'none' | 'arrow' | 'dot';
+export type Cap = 'none' | 'round' | 'butt' | 'arrow' | 'dot' | 'point';
 
 const GAP = 4; // khoảng hở giữa đầu đường nối và cạnh hình
 
@@ -95,14 +95,29 @@ function trimEnd(pts: XY[], d: number): { pts: XY[]; dir: XY } {
 /** Tổng độ dài đường. */
 export const pathLength = (pts: XY[]) => pts.slice(1).reduce((s, p, i) => s + len(pts[i], p), 0);
 
+/** Chèn thêm điểm tại quãng đường d (tính từ đầu) để độ dày đổi đúng chỗ. */
+function splitAt(pts: XY[], d: number): XY[] {
+  let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const l = len(pts[i - 1], pts[i]);
+    if (d > acc + 0.01 && d < acc + l - 0.01) {
+      const t = (d - acc) / l, a = pts[i - 1], b = pts[i];
+      return [...pts.slice(0, i), [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], ...pts.slice(i)];
+    }
+    acc += l;
+  }
+  return pts;
+}
+
 /**
- * Đường nét dày `th` theo các điểm `pts` → chuỗi path tô đặc.
- * Đầu mút: 'arrow' (mũi tên đặc), 'dot' (chấm tròn), 'none' (đầu tròn).
+ * Đường nét dày `th` theo các điểm `pts` → chuỗi path tô đặc (không dùng stroke/marker).
+ * Đầu mút: 'arrow' mũi tên đặc · 'dot' chấm tròn · 'point' nhọn (thon dần) · 'butt' bằng · 'round'/'none' tròn.
+ * hs: hệ số cỡ đầu mút (mũi tên, chấm, độ dài phần thon).
  */
-export function strokeOutline(pts0: XY[], th: number, start: Cap = 'none', end: Cap = 'arrow'): string {
+export function strokeOutline(pts0: XY[], th: number, start: Cap = 'none', end: Cap = 'arrow', hs = 1): string {
   let pts = pts0.filter((p, i) => i === 0 || len(pts0[i - 1], p) > 0.01);
   if (pts.length < 2) return '';
-  const head = Math.max(10, th * 3.5), hw = head * 0.55, r = th / 2;
+  const head = Math.max(10, th * 3.5) * hs, hw = head * 0.55;
   const total = pathLength(pts);
   const out: string[] = [];
   const arrow = (tip: XY, dir: XY) => {
@@ -115,16 +130,29 @@ export function strokeOutline(pts0: XY[], th: number, start: Cap = 'none', end: 
     const rev = [...pts].reverse(), tip = rev[rev.length - 1], t = trimEnd(rev, head * 0.85);
     pts = t.pts.reverse(); arrow(tip, t.dir);
   }
+  // đầu nhọn: độ dày giảm dần về 0 trên một đoạn
+  const L = pathLength(pts);
+  const tS = start === 'point' ? Math.min(th * 6 * hs, L * 0.45) : 0, tE = end === 'point' ? Math.min(th * 6 * hs, L * 0.45) : 0;
+  if (tS) pts = splitAt(pts, tS);
+  if (tE) pts = splitAt(pts, L - tE);
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + len(pts[i - 1], pts[i]));
+  const width = (d: number) => th * Math.max(0, Math.min(1, tS ? d / tS : 1, tE ? (L - d) / tE : 1));
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i], l = len(a, b); if (l < 0.01) continue;
-    const nx = (-(b[1] - a[1]) / l) * r, ny = ((b[0] - a[0]) / l) * r;
-    out.push(poly([[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]]));
+    const wa = width(cum[i - 1]) / 2, wb = width(cum[i]) / 2;
+    if (wa < 0.01 && wb < 0.01) continue;
+    const ux = -(b[1] - a[1]) / l, uy = (b[0] - a[0]) / l;
+    out.push(poly([[a[0] + ux * wa, a[1] + uy * wa], [b[0] + ux * wb, b[1] + uy * wb], [b[0] - ux * wb, b[1] - uy * wb], [a[0] - ux * wa, a[1] - uy * wa]]));
   }
-  // khớp nối bo tròn ở các điểm gấp, và đầu tròn ở hai đầu không có mũi tên
-  for (let i = 1; i < pts.length - 1; i++) out.push(circle(pts[i], r));
-  const capAt = (p: XY, c: Cap) => { if (c === 'dot') out.push(circle(p, Math.max(r * 2.2, 4))); else if (c === 'none') out.push(circle(p, r)); };
-  capAt(pts0[0], start === 'arrow' ? 'arrow' : start);
-  capAt(pts0[pts0.length - 1], end === 'arrow' ? 'arrow' : end);
+  // khớp nối bo tròn ở các điểm gấp
+  for (let i = 1; i < pts.length - 1; i++) { const w = width(cum[i]) / 2; if (w > 0.05) out.push(circle(pts[i], w)); }
+  const capAt = (p: XY, c: Cap) => {
+    if (c === 'dot') out.push(circle(p, Math.max(th * 1.1, 4) * hs));
+    else if (c === 'none' || c === 'round') out.push(circle(p, th / 2));
+  };
+  capAt(pts0[0], start);
+  capAt(pts0[pts0.length - 1], end);
   return out.join(' ');
 }
 

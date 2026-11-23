@@ -43,6 +43,14 @@ export const LIBRARY: LibGroup[] = [
     { n: 'Ngũ giác mũi', t: 'homeplate', w: 200, h: 110 },
     { n: 'Mũi tên gấp', t: 'bent', w: 220, h: 200 },
   ] },
+  { g: 'Đường cong', items: [
+    { n: 'Đường cong', t: 'curve', w: 240, h: 130, p: { x0: 0.06, y0: 0.85, x1: 0.94, y1: 0.15, a1: 70, k1: 0.45, a2: -70, k2: 0.45 } },
+    { n: 'Cung parabol', t: 'curve', w: 240, h: 130, p: { mode: 'parabol', x0: 0.05, y0: 0.9, x1: 0.95, y1: 0.9, h: 0.42, sk: 0.5 } },
+    { n: 'Mũi tên cong', t: 'curve', w: 240, h: 130, p: { x0: 0.06, y0: 0.85, x1: 0.92, y1: 0.85, a1: 60, k1: 0.5, a2: 60, k2: 0.5, ea: 'arrow' } },
+    { n: 'Cong hai mũi tên', t: 'curve', w: 240, h: 130, p: { x0: 0.08, y0: 0.8, x1: 0.92, y1: 0.8, a1: 55, k1: 0.45, a2: 55, k2: 0.45, sa: 'arrow', ea: 'arrow' } },
+    { n: 'Nét bút nhọn', t: 'curve', w: 240, h: 110, p: { x0: 0.06, y0: 0.75, x1: 0.94, y1: 0.3, a1: 40, k1: 0.4, a2: -40, k2: 0.4, th: 12, sa: 'point', ea: 'point' } },
+    { n: 'Chấm nối mũi tên', t: 'curve', w: 240, h: 130, p: { x0: 0.08, y0: 0.2, x1: 0.92, y1: 0.8, a1: -40, k1: 0.5, a2: -40, k2: 0.5, sa: 'dot', ea: 'arrow' } },
+  ] },
   { g: 'Khối & sơ đồ', items: [
     { n: 'Khối 3D', t: 'cube', w: 160, h: 160 },
     { n: 'Trụ', t: 'cyl', w: 140, h: 170 },

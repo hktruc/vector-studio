@@ -35,6 +35,10 @@ const SYNONYMS: Record<string, string[]> = {
   'Kim tự tháp': ['pyramid', 'thap', 'tang'],
   'Phễu': ['funnel', 'pheu', 'sales'],
   'Bậc thang': ['steps', 'cau thang', 'tang truong'],
+  'Đường cong': ['curve', 'bezier', 'cong', 'uon', 'luon', 'song', 'wave', 's'],
+  'Cung parabol': ['parabol', 'parabola', 'cung', 'vom', 'arc', 'nhip cau'],
+  'Mũi tên cong': ['curved arrow', 'mui ten cong', 'vong'],
+  'Nét bút nhọn': ['brush', 'net but', 'nhon', 'thu phap'],
   'Văn bản': ['text', 'chu', 'tieu de', 'title', 'ghi'],
 };
 

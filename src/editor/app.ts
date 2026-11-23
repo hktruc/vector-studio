@@ -128,7 +128,7 @@ export function startApp() {
     return (tag === 'input' && el.type !== 'range' && el.type !== 'checkbox') || tag === 'textarea' || tag === 'select' || !!el?.isContentEditable;
   };
   /** Phím một chữ để "cầm" hình rồi kéo vẽ trên khung. */
-  const DRAW_KEYS: Record<string, string> = { r: 'Chữ nhật', o: 'Tròn', a: 'Mũi tên phải', t: 'Văn bản', l: 'Đường kẻ' };
+  const DRAW_KEYS: Record<string, string> = { r: 'Chữ nhật', o: 'Tròn', a: 'Mũi tên phải', t: 'Văn bản', l: 'Đường kẻ', c: 'Đường cong' };
   document.addEventListener('keyup', (e) => { if (e.key === ' ') canvas.spaceHeld = false; });
   window.addEventListener('blur', () => { canvas.spaceHeld = false; });
   document.addEventListener('keydown', (e) => {
@@ -149,7 +149,7 @@ export function startApp() {
     if (e.key === 'Escape') { store.select(null); return; }
     const one = store.selected;
     if (e.key === 'Tab' && one && !isConnector(one)) { e.preventDefault(); const n = store.addNext(one.id); if (n) startText(n.id); return; }
-    if ((e.key === 'Enter' || e.key === 'F2') && one && !isConnector(one) && one.t !== 'image') { e.preventDefault(); canvas.editLabel(one.id); return; }
+    if ((e.key === 'Enter' || e.key === 'F2') && one && !isConnector(one) && one.t !== 'image' && one.t !== 'curve') { e.preventDefault(); canvas.editLabel(one.id); return; }
     if (mod && k === 'g') { e.preventDefault(); e.shiftKey ? store.ungroup() : store.group(); return; }
     if (mod && e.shiftKey && k === 'h') { e.preventDefault(); store.setHidden(store.sel, true); return; }
     if (mod && e.shiftKey && k === 'l') { e.preventDefault(); store.setLocked(store.sel, true); return; }

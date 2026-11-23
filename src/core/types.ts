@@ -12,6 +12,8 @@ export interface ParamDef {
   max?: number;
   step?: number;
   def: ParamValue;
+  /** Chỉ hiện thanh chỉnh này khi điều kiện đúng (ví dụ theo kiểu đường cong đang chọn). */
+  show?: (p: Record<string, any>) => boolean;
 }
 
 /** Một mảnh vẽ của hình: đường path (hoặc chữ) kèm độ sáng tối. */
@@ -31,6 +33,8 @@ export interface ShapeDef {
   parts: (w: number, h: number, p: Record<string, any>) => Part[];
   /** Thông số cần nhân theo tỉ lệ khi phóng to/thu nhỏ đều (ví dụ cỡ chữ). */
   scaleParams?: string[];
+  /** Gọi sau mỗi thay đổi để hình tự chỉnh khung (ví dụ đường cong co khung ôm sát). */
+  refit?: (s: Shape) => void;
 }
 
 /** Một hình cụ thể nằm trên khung. */

@@ -1,6 +1,6 @@
 import { DOC_VERSION, type Doc, type LibItem, type Shape } from './types';
 import { COLORS, SIZES, STORAGE_KEY } from './constants';
-import { defaultParams } from '../shapes/registry';
+import { defaultParams, getShape } from '../shapes/registry';
 import { alignShapes, distributeShapes, unitsOf, type AlignMode } from './align';
 import { isConnector, syncConnectors } from './connect';
 import { bboxOf } from './transform';
@@ -35,6 +35,8 @@ function units(shapes: Shape[]): Shape[][] {
   return out;
 }
 
+const refitOf = (t: string) => { try { return getShape(t).refit; } catch { return undefined; } };
+
 /** Hình chọn được trên khung: không ẩn, không khóa. */
 export const selectable = (s: Shape) => !s.hidden && !s.locked;
 
@@ -62,7 +64,11 @@ export class DocStore {
     (ev === 'change' ? this.onChange : this.onSelect).add(fn);
   }
   /** Báo vẽ lại; trước đó cập nhật đường nối theo vị trí hình mới nhất. */
-  emitChange() { syncConnectors(this.doc); this.onChange.forEach((f) => f()); }
+  emitChange() {
+    for (const s of this.doc.shapes) { const r = refitOf(s.t); if (r) r(s); } // hình tự chỉnh khung (đường cong)
+    syncConnectors(this.doc);
+    this.onChange.forEach((f) => f());
+  }
   /** Gọi khi không lưu được vào trình duyệt (thường do bộ nhớ đầy vì ảnh quá lớn). */
   onSaveError: (e: unknown) => void = () => {};
   emitSelect() { this.onSelect.forEach((f) => f()); this.emitChange(); }

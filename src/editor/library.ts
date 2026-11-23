@@ -9,7 +9,7 @@ export function itemThumb(it: LibItem, fill = '#3F7FB5'): string {
   const inner =
     it.t === 'text'
       ? `<text x="${it.w / 2}" y="${it.h / 2 + 16}" text-anchor="middle" font-size="46" font-weight="700" fill="${fill}" font-family="Arial">Aa</text>`
-      : partsOf(it.t, it.w, it.h, { ...defaultParams(it.t), ...(it.p || {}) })
+      : partsOf(it.t, it.w, it.h, { ...defaultParams(it.t), ...(it.p || {}), ...(it.t === 'curve' ? { th: Math.max(14, it.p?.th ?? 0) } : {}) }) // nét đậm hơn cho dễ nhìn ở ảnh nhỏ
           .map((pt) => `<path d="${pt.d}" fill="${mix(fill, pt.shade || 0)}"${pt.rule ? ` fill-rule="${pt.rule}"` : ''}/>`)
           .join('');
   return `<svg viewBox="${-pad} ${-pad} ${it.w + pad * 2} ${it.h + pad * 2}">${inner}</svg>`;
