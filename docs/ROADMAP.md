@@ -2,7 +2,7 @@
 
 > Bản đồ tính năng đầy đủ và thứ tự ưu tiên: [`FEATURE-MAP.md`](FEATURE-MAP.md). Mọi tính năng phải qua phép thử trong [`DESIGN-PRINCIPLES.md`](DESIGN-PRINCIPLES.md).
 
-Phiên bản hiện tại (0.6): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp, bộ màu thương hiệu + gradient, xuất PNG.
+Phiên bản hiện tại (0.7): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp, bộ màu thương hiệu + gradient, xuất PNG, nhóm A "đưa ý ra thành hình" (gõ để thêm, kéo thả, vẽ bằng kéo, chữ trên hình, Tab + đường nối, dán, khung vô hạn, tự bố trí).
 
 Bản chạy thật: https://vector-studio.hktruc.workers.dev
 

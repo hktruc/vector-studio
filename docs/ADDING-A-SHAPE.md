@@ -17,6 +17,8 @@ Ví dụ: thêm hình **trái tim** hoặc **mây**. Chỉ cần 3 bước.
 }
 ```
 
+Thông số có các kiểu: thanh trượt (mặc định), `type: 'text'`, `type: 'check'`, `type: 'select'` (kèm `opts: [['giá trị', 'Nhãn'], …]`).
+
 Tiện ích hình học có sẵn trong `core/geometry.ts`: `Pn` (đa giác theo tọa độ 0..1), `rrect`, `ellipseD`, `pieD`, `polar`, `ngonD`, `starD`, `tiers`.
 
 ## 2. Đưa vào thư viện hiển thị: `src/shapes/catalog.ts`
@@ -26,6 +28,10 @@ Tiện ích hình học có sẵn trong `core/geometry.ts`: `Pn` (đa giác theo
 ```
 
 Mỗi mục là một "mẫu": cùng loại hình nhưng khác kích thước/thông số (ví dụ 1/2, 1/3, 1/4 hình tròn đều là loại `pie`).
+
+## 2b. (Nên làm) Cho phép "gõ để thêm" tìm ra hình
+
+Thêm vài từ đồng nghĩa (không dấu) vào `SYNONYMS` trong `src/shapes/search.ts`, ví dụ `'Huy hiệu': ['badge', 'tem', 'nhan']`.
 
 ## 3. Chạy kiểm thử
 

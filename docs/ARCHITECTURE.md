@@ -25,6 +25,7 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
   - v2: thêm `Shape.gid` (nhóm hình).
   - v3: thêm `Shape.name`, `Shape.hidden`, `Shape.locked`, `Doc.gnames` (tên nhóm).
   - v4: thêm `Shape.grad` (màu chuyển sắc).
+  - v5: thêm `Shape.label`, `Shape.lc` (chữ trên hình); loại hình `connector` (đường nối) và `image` (ảnh dán).
 
 ## Chọn nhiều & nhóm
 - `DocStore.sel` là danh sách id. Chọn một hình thuộc nhóm luôn chọn cả nhóm. `selected` chỉ trả về hình khi chọn đúng một hình lẻ; `selection` trả về tất cả.
@@ -41,6 +42,21 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - **Bộ màu thương hiệu** (`core/palette.ts`, lớp `BrandPalette`): lưu riêng trong `localStorage` (khóa `vector-studio-palette-v1`), không nằm trong tài liệu, nên dùng chung cho mọi bản vẽ. `DocStore.colorSource` lấy màu cho hình mới từ đây.
 - **Gradient** (`Shape.grad`): `shapeToSVG` tự thêm `<defs>` với `<linearGradient>`/`<radialGradient>` dùng `gradientUnits="userSpaceOnUse"` trong hệ tọa độ riêng của hình, nên xoay/lật hình thì gradient đi theo. Mỗi độ sáng tối (`shade`) có một gradient riêng. Tham số `idPrefix` tránh trùng id khi cùng một hình được vẽ nhiều lần trên trang (khung vẽ dùng `vsg`, ảnh thu nhỏ ở panel lớp dùng `lt`).
 - Gradient không phải marker/mask/filter nên vẫn đúng quy tắc "hình đặc"; nhưng Canva thường không cho đổi màu gradient, giao diện có ghi chú.
+
+## Đưa ý ra thành hình (nhóm A)
+| Phần | Lõi (thuần, có test) | Giao diện |
+|---|---|---|
+| Khung vô hạn, thu phóng | `core/camera.ts` (`zoomAt`, `fitBox`, `viewCenter`) | `EditorCanvas.cam`, thanh thu phóng góc phải dưới |
+| Chữ trên hình | `core/text.ts` ước lượng bề rộng chữ (Arial) nên chạy được trong Node; `labelSVG` trong export.ts | ô `textarea.inedit` đè lên hình khi bấm đúp |
+| Đường nối | `core/connect.ts`: `routeConnector` (thẳng/gấp khúc/cong), `strokeOutline` (nét → hình đặc, mọi mảnh cùng chiều để tô nonzero), `syncConnectors` (gọi trong `DocStore.emitChange`) | bấm chọn bằng vùng bấm rộng 14px |
+| Tab | `DocStore.addNext` tìm chỗ trống bên phải → dưới → trên → trái | Tab khi chọn hình, hoặc khi đang gõ chữ |
+| Tự bố trí | `core/layout.ts` (`layoutTree/Ring/Grid`) làm trên khung bao của từng khối | nút Cây/Vòng/Lưới khi chọn ≥ 2 hình |
+| Gõ để thêm | `shapes/search.ts` (bỏ dấu, từ đồng nghĩa — thêm từ mới vào `SYNONYMS`) | `editor/quickadd.ts` |
+| Sao chép/dán | `DocStore.copySelection/pasteShapes` (id mới, nhóm mới, nối lại đường nối) | sự kiện copy/cut/paste của trình duyệt; ảnh qua `platform/image.ts` (thu nhỏ ≤ 1400px) |
+
+- Đường nối là một `Shape` như mọi hình (đúng quy tắc 2): `p.a`, `p.b` là id hai đầu; vị trí của nó là dữ liệu suy ra, luôn được tính lại sau mỗi thay đổi.
+- Xóa hình thì đường nối dính vào nó bị xóa theo.
+- Khung vẽ được dựng lại sau mỗi lần bấm, nên khi cần biết hình dưới con trỏ ở sự kiện `dblclick` thì dùng `document.elementFromPoint`, không dùng `e.target`.
 
 ## Căn chỉnh & đường gióng (core/align.ts)
 - `alignShapes` / `distributeShapes` làm việc trên "khối" (nhóm = một khối). Chỉ có một khối thì căn theo trang.

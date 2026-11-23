@@ -7,15 +7,15 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 | Tính năng | Ghi chú | TT |
 |---|---|---|
 | Thêm hình từ thư viện (một cú bấm) | | ✅ |
-| Gõ để thêm: bấm đúp lên khung (hoặc phím `/`) mở ô tìm, gõ "tròn", "mũi tên", Enter | tìm theo tên và từ đồng nghĩa | ⬜ |
-| Kéo hình từ thư viện thả đúng chỗ | | ⬜ |
-| Vẽ hình bằng kéo trực tiếp trên khung (phím tắt R, O, A… hoặc nhấn giữ hình trong thư viện) | không cần công cụ riêng | ⬜ |
-| Gõ chữ ngay trên hình (bấm đúp vào hình) | chữ tự co vừa khung | ⬜ |
-| Hình tiếp theo từ hình đang chọn (Tab = tạo hình kề bên và nối) | cốt lõi cho sơ đồ ý tưởng | ⬜ |
-| Đường nối thông minh bám vào hình, tự đi theo khi kéo | thẳng, gấp khúc, cong | ⬜ |
-| Dán ảnh/SVG/văn bản thẳng vào khung | | ⬜ |
-| Khung vô hạn, thu phóng, kéo khung nhìn | không lo hết chỗ | ⬜ |
-| Sơ đồ tự bố trí (cây, vòng, lưới) bằng một nút | | ⬜ |
+| Gõ để thêm: bấm đúp lên khung (hoặc phím `/`) mở ô tìm, gõ "tròn", "mũi tên", Enter | tìm theo tên, từ đồng nghĩa, gõ không dấu; không khớp thì thêm chữ | ✅ |
+| Kéo hình từ thư viện thả đúng chỗ | | ✅ |
+| Vẽ hình bằng kéo trực tiếp trên khung (phím tắt R, O, A… hoặc nhấn giữ hình trong thư viện) | R chữ nhật · O tròn · A mũi tên · T chữ · L đường kẻ; mũi tên/đường kẻ theo hướng kéo | ✅ |
+| Gõ chữ ngay trên hình (bấm đúp vào hình) | chữ tự co vừa khung, màu chữ tự tương phản | ✅ |
+| Hình tiếp theo từ hình đang chọn (Tab = tạo hình kề bên và nối) | Tab cả khi đang gõ chữ: gõ → Tab → gõ… | ✅ |
+| Đường nối thông minh bám vào hình, tự đi theo khi kéo | thẳng, gấp khúc, cong; đầu mút mũi tên/chấm/tròn; xuất dạng hình đặc | ✅ |
+| Dán ảnh/SVG/văn bản thẳng vào khung | ảnh tự thu nhỏ; mỗi dòng chữ thành một khối; thả file ảnh vào khung | ✅ |
+| Khung vô hạn, thu phóng, kéo khung nhìn | Ctrl+cuộn / chụm hai ngón; cuộn, phím cách+kéo, chuột giữa | ✅ |
+| Sơ đồ tự bố trí (cây, vòng, lưới) bằng một nút | theo đường nối | ✅ |
 
 ## B. Thao tác nhanh trên nhiều hình
 | Tính năng | TT |
@@ -24,7 +24,7 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 | Căn chỉnh, phân bố đều, đường gióng khi kéo | ✅ |
 | Nhân đôi bằng kéo kèm phím, Ctrl+D | ◐ |
 | Đổi màu hàng loạt, bộ màu thương hiệu | ✅ |
-| Sao chép dán, dán tại chỗ, dán giữ kiểu | ⬜ |
+| Sao chép dán, dán tại chỗ, dán giữ kiểu | ◐ (Ctrl+C/X/V, dán tại con trỏ; chưa có dán giữ kiểu) |
 | Panel lớp (ẩn, khóa, đổi tên) | ✅ |
 | Hoàn tác / làm lại | ✅ |
 
@@ -65,7 +65,7 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 |---|---|
 | Màu tô đặc, viền, độ trong suốt | ✅ |
 | Gradient, pattern, hatch | ◐ (có gradient thẳng/tròn) |
-| Nét đứt, đầu mút mũi tên, độ dày nét đổi dọc đường | ⬜ |
+| Nét đứt, đầu mút mũi tên, độ dày nét đổi dọc đường | ◐ (đầu mút mũi tên/chấm/tròn cho đường nối) |
 | Bóng đổ, làm mờ | ⬜ |
 
 ## G. Nhập, xuất, nền tảng
@@ -78,7 +78,7 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 | Lưu dự án lên đám mây, nhiều dự án, nhiều trang | ⬜ |
 | Chia sẻ liên kết, cộng tác thời gian thực | ⬜ |
 | Chạy mượt với ≥ 5.000 hình (chỉ vẽ lại phần đổi) | ⬜ |
-| Cảm ứng (pinch, hai ngón), bút stylus | ⬜ |
+| Cảm ứng (pinch, hai ngón), bút stylus | ◐ (chụm/kéo hai ngón) |
 
 ## Thứ tự làm đề xuất
 1. **A: tốc độ đưa ý ra** (gõ để thêm, kéo thả, Tab nối hình, đường nối thông minh, khung vô hạn + thu phóng).
