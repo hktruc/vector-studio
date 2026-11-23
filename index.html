@@ -22,7 +22,11 @@
   <span id="msg"></span>
 </header>
 <main>
-  <aside id="lib"></aside>
+  <aside id="left">
+    <div class="tabs" role="tablist"><button class="tab on" data-tab="lib" role="tab">Hình</button><button class="tab" data-tab="layers" role="tab">Lớp <span id="lyrN"></span></button></div>
+    <div id="lib"></div>
+    <div id="layers" hidden></div>
+  </aside>
   <section id="wrapC"><svg id="stage"></svg></section>
   <aside id="props" class="pr"></aside>
 </main>

@@ -1,13 +1,13 @@
 # Lộ trình
 
-Phiên bản hiện tại (0.3): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng.
+Phiên bản hiện tại (0.4): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp.
 
 Bản chạy thật: https://vector-studio.hktruc.workers.dev
 
 ## Giai đoạn 1 – Hoàn thiện bộ vẽ
 - [x] Chọn nhiều hình, nhóm / bỏ nhóm (Shift+bấm, quét chọn, Ctrl+G / Ctrl+Shift+G; phóng đều và xoay cả nhóm)
 - [x] Căn chỉnh, phân bố đều, đường gióng thông minh (6 kiểu căn, phân bố ngang/dọc, đường gióng hồng khi kéo; giữ Alt để tạm tắt)
-- [ ] Panel lớp (đổi tên, ẩn, khóa)
+- [x] Panel lớp (đổi tên, ẩn, khóa) — thẻ **Lớp** ở cột trái; Ctrl+Shift+H ẩn, Ctrl+Shift+L khóa
 - [ ] Màu theo bộ màu thương hiệu, lưu bộ màu
 - [ ] Gradient, bóng đổ
 - [ ] Xuất PNG, PDF

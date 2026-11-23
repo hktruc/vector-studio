@@ -6,6 +6,7 @@ import { saveTextFile } from '../platform/download';
 import { EditorCanvas } from './canvas';
 import { buildLibrary } from './library';
 import { PropsPanel } from './props';
+import { LayersPanel } from './layers';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -16,6 +17,15 @@ export function startApp() {
   const props = new PropsPanel($('props'), store);
   canvas.onGeometryChange = () => props.syncNumbers();
   buildLibrary($('lib'), (it) => store.addFromLibrary(it));
+  const layers = new LayersPanel($('layers'), store);
+  layers.onRender = (n) => { $('lyrN').textContent = n ? `(${n})` : ''; };
+  layers.render();
+  // thẻ Hình / Lớp ở cột trái
+  document.querySelectorAll<HTMLButtonElement>('.tab').forEach((b) => (b.onclick = () => {
+    document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === b));
+    $('lib').hidden = b.dataset.tab !== 'lib';
+    $('layers').hidden = b.dataset.tab !== 'layers';
+  }));
 
   // thanh công cụ
   const csize = $<HTMLSelectElement>('csize');
@@ -64,6 +74,8 @@ export function startApp() {
     const list = store.selection; if (!list.length) return;
     if (e.key === 'Escape') { store.select(null); return; }
     if (mod && k === 'g') { e.preventDefault(); e.shiftKey ? store.ungroup() : store.group(); return; }
+    if (mod && e.shiftKey && k === 'h') { e.preventDefault(); store.setHidden(store.sel, true); return; }
+    if (mod && e.shiftKey && k === 'l') { e.preventDefault(); store.setLocked(store.sel, true); return; }
     if (mod && k === 'd') { e.preventDefault(); store.duplicate(); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); store.remove(); return; }
     const st = e.shiftKey ? 10 : 1;

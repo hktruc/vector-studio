@@ -47,10 +47,19 @@ export interface Shape {
   p: Record<string, any>;
   /** Mã nhóm (không có = hình lẻ). Các hình cùng gid luôn nằm liền nhau trong doc.shapes. */
   gid?: number;
+  /** Tên hiển thị trong panel lớp (không có = dùng tên mẫu hình). */
+  name?: string;
+  /** Ẩn: không vẽ trên khung, không xuất ra file, không chọn được. */
+  hidden?: boolean;
+  /** Khóa: vẫn vẽ và xuất, nhưng không chọn/kéo được trên khung. */
+  locked?: boolean;
 }
 
-/** Phiên bản định dạng dữ liệu hiện tại. v2: thêm Shape.gid (nhóm hình). */
-export const DOC_VERSION = 2;
+/**
+ * Phiên bản định dạng dữ liệu hiện tại.
+ * v2: thêm Shape.gid (nhóm hình). v3: thêm Shape.name/hidden/locked và Doc.gnames (tên nhóm).
+ */
+export const DOC_VERSION = 3;
 
 export interface Doc {
   v: typeof DOC_VERSION; // phiên bản định dạng dữ liệu
@@ -59,6 +68,8 @@ export interface Doc {
   sizeIdx: number;
   seq: number;
   shapes: Shape[];
+  /** Tên nhóm theo gid (không có = "Nhóm"). */
+  gnames?: Record<number, string>;
 }
 
 export interface LibItem {

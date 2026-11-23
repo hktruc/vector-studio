@@ -14,3 +14,12 @@ export function registerBuiltinShapes(): void {
 }
 export * from './registry';
 export { LIBRARY } from './catalog';
+
+import { LIBRARY as LIB } from './catalog';
+import type { Shape } from '../core/types';
+/** Tên hiển thị của hình: tên người dùng đặt, nếu không có thì tên mẫu hình trong thư viện. */
+export function shapeLabel(s: Pick<Shape, 't' | 'name'>): string {
+  if (s.name) return s.name;
+  for (const g of LIB) for (const it of g.items) if (it.t === s.t) return it.n;
+  return s.t;
+}

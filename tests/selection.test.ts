@@ -137,14 +137,14 @@ describe('biến đổi nhiều hình', () => {
 });
 
 describe('nâng cấp dữ liệu', () => {
-  it('tài liệu v1 cũ được nâng lên v2 và vẫn mở được', () => {
+  it('tài liệu v1 cũ được nâng lên bản mới nhất và vẫn mở được', () => {
     const v1 = { v: 1, cw: 1280, ch: 720, sizeIdx: 0, seq: 3, shapes: [{ id: 1, t: 'rrect', x: 1, y: 1, w: 10, h: 10, r: 0, fx: 1, fy: 1, fill: '#000', stroke: '#000', sw: 0, op: 1, p: { r: 0 } }] };
-    expect(migrateDoc(v1)?.v).toBe(2);
+    expect(migrateDoc(v1)?.v).toBe(3);
     const mem = new Map<string, string>();
     const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v) };
     mem.set('vector-studio-doc-v1', JSON.stringify(v1));
     const st = new DocStore(storage);
-    expect(st.doc.v).toBe(2);
+    expect(st.doc.v).toBe(3);
     expect(st.doc.shapes.length).toBe(1);
   });
   it('dữ liệu hỏng hoặc phiên bản lạ thì bỏ qua', () => {

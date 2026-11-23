@@ -21,12 +21,18 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - `ShapeDef.parts(w, h, params)` trả về các mảnh path trong hệ tọa độ cục bộ `0..w × 0..h`. Phép xoay/lật/dời do `shapeTransform` lo.
 - Định dạng tài liệu có trường `v` (phiên bản, hằng `DOC_VERSION`). Khi đổi cấu trúc dữ liệu, tăng `v` và thêm bước nâng cấp trong `migrateDoc` (core/store.ts).
   - v2: thêm `Shape.gid` (nhóm hình).
+  - v3: thêm `Shape.name`, `Shape.hidden`, `Shape.locked`, `Doc.gnames` (tên nhóm).
 
 ## Chọn nhiều & nhóm
 - `DocStore.sel` là danh sách id. Chọn một hình thuộc nhóm luôn chọn cả nhóm. `selected` chỉ trả về hình khi chọn đúng một hình lẻ; `selection` trả về tất cả.
 - Nhóm không lồng nhau: nhóm các nhóm sẽ gộp thành một nhóm phẳng. Thứ tự lớp di chuyển theo "khối" (cả nhóm một lúc).
 - Nhiều hình chỉ phóng đều (giữ tỉ lệ) vì hình đã xoay không kéo giãn lệch được mà vẫn đúng dạng. Thông số cần phóng theo (ví dụ cỡ chữ) khai báo bằng `ShapeDef.scaleParams`.
 - Khi xuất SVG, mỗi nhóm được bọc trong một thẻ `<g>` để Canva/Illustrator nhận ra nhóm.
+
+## Panel lớp (editor/layers.ts)
+- Hiển thị `doc.shapes` đảo ngược (trên cùng ở đầu), nhóm là một dòng mở rộng được. Ảnh thu nhỏ vẽ bằng `shapeToSVG`.
+- Ẩn (`hidden`): không vẽ, không xuất, không chọn. Khóa (`locked`): vẫn vẽ và xuất, nhưng không chọn được (`selectable()` trong core/store.ts).
+- Tên mặc định lấy từ tên mẫu trong thư viện (`shapeLabel` ở shapes/index.ts).
 
 ## Căn chỉnh & đường gióng (core/align.ts)
 - `alignShapes` / `distributeShapes` làm việc trên "khối" (nhóm = một khối). Chỉ có một khối thì căn theo trang.

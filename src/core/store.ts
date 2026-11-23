@@ -8,10 +8,12 @@ type Listener = () => void;
 /**
  * Nâng cấp tài liệu cũ lên định dạng hiện tại. Trả về null nếu không đọc được.
  * v1 → v2: thêm Shape.gid (không bắt buộc), nên chỉ cần đổi số phiên bản.
+ * v2 → v3: thêm name/hidden/locked, gnames (đều không bắt buộc).
  */
 export function migrateDoc(o: any): Doc | null {
   if (!o || typeof o !== 'object' || !Array.isArray(o.shapes)) return null;
   if (o.v === 1) o = { ...o, v: 2 };
+  if (o.v === 2) o = { ...o, v: 3 };
   if (o.v !== DOC_VERSION) return null;
   return o as Doc;
 }
@@ -26,6 +28,9 @@ function units(shapes: Shape[]): Shape[][] {
   }
   return out;
 }
+
+/** Hình chọn được trên khung: không ẩn, không khóa. */
+export const selectable = (s: Shape) => !s.hidden && !s.locked;
 
 /** Trạng thái tài liệu + chọn hình (một hoặc nhiều) + hoàn tác/làm lại. Không biết gì về giao diện. */
 export class DocStore {
@@ -60,13 +65,13 @@ export class DocStore {
   get selectedGroup(): number | undefined {
     const l = this.selection, g = l[0]?.gid;
     if (g === undefined || l.some((s) => s.gid !== g)) return undefined;
-    return l.length === this.doc.shapes.filter((s) => s.gid === g).length ? g : undefined;
+    return l.length === this.doc.shapes.filter((s) => s.gid === g && selectable(s)).length ? g : undefined;
   }
 
-  /** id kèm toàn bộ thành viên cùng nhóm. */
+  /** id kèm toàn bộ thành viên cùng nhóm; bỏ hình đang ẩn hoặc khóa. */
   private withGroup(ids: number[]): number[] {
     const gids = new Set(this.doc.shapes.filter((s) => ids.includes(s.id) && s.gid !== undefined).map((s) => s.gid));
-    return this.doc.shapes.filter((s) => ids.includes(s.id) || (s.gid !== undefined && gids.has(s.gid))).map((s) => s.id);
+    return this.doc.shapes.filter((s) => selectable(s) && (ids.includes(s.id) || (s.gid !== undefined && gids.has(s.gid)))).map((s) => s.id);
   }
   private setSel(ids: number[]) {
     const next = this.withGroup(ids);
@@ -115,6 +120,7 @@ export class DocStore {
       fill: it.t === 'text' ? '#1B2A3A' : COLORS[this.colorIdx++ % COLORS.length],
       stroke: '#12497A', sw: 0, op: 1,
       p: { ...defaultParams(it.t), ...(it.p || {}) },
+      name: it.n,
     };
     this.doc.shapes.push(s);
     this.sel = [s.id];
@@ -128,7 +134,13 @@ export class DocStore {
     const copies = list.map((s) => {
       const c: Shape = JSON.parse(JSON.stringify(s));
       c.id = this.doc.seq++; c.x += 20; c.y += 20;
-      if (s.gid !== undefined) { if (!gmap.has(s.gid)) gmap.set(s.gid, this.doc.seq++); c.gid = gmap.get(s.gid); }
+      if (s.gid !== undefined) {
+        if (!gmap.has(s.gid)) {
+          const ng = this.doc.seq++; gmap.set(s.gid, ng);
+          const nm = this.doc.gnames?.[s.gid]; if (nm) this.doc.gnames = { ...this.doc.gnames, [ng]: nm };
+        }
+        c.gid = gmap.get(s.gid);
+      }
       return c;
     });
     this.doc.shapes.push(...copies); this.sel = copies.map((c) => c.id); this.commit(); this.emitSelect();
@@ -160,8 +172,33 @@ export class DocStore {
   /** Bỏ nhóm: các hình đang chọn trở thành hình lẻ (vẫn giữ nguyên vùng chọn). */
   ungroup() {
     const list = this.selection.filter((s) => s.gid !== undefined); if (!list.length) return;
-    list.forEach((s) => delete s.gid);
+    list.forEach((s) => { if (this.doc.gnames) delete this.doc.gnames[s.gid!]; delete s.gid; });
     this.commit(); this.emitSelect();
+  }
+
+  /* ---------- Panel lớp: tên, ẩn, khóa ---------- */
+
+  rename(id: number, name: string) {
+    const s = this.doc.shapes.find((x) => x.id === id); if (!s) return;
+    const n = name.trim(); if (n) s.name = n; else delete s.name;
+    this.commit(); this.emitChange();
+  }
+  renameGroup(gid: number, name: string) {
+    const n = name.trim(), g = { ...(this.doc.gnames || {}) };
+    if (n) g[gid] = n; else delete g[gid];
+    this.doc.gnames = g; this.commit(); this.emitChange();
+  }
+  /** Ẩn/hiện các hình. Hình bị ẩn được bỏ khỏi vùng chọn. */
+  setHidden(ids: number[], on: boolean) { this.setFlag(ids, 'hidden', on); }
+  /** Khóa/mở khóa các hình. Hình bị khóa được bỏ khỏi vùng chọn. */
+  setLocked(ids: number[], on: boolean) { this.setFlag(ids, 'locked', on); }
+  private setFlag(ids: number[], k: 'hidden' | 'locked', on: boolean) {
+    const set = new Set(ids), list = this.doc.shapes.filter((s) => set.has(s.id)); if (!list.length) return;
+    list.forEach((s) => { if (on) s[k] = true; else delete s[k]; });
+    const before = this.sel.length;
+    this.sel = this.sel.filter((id) => selectable(this.doc.shapes.find((s) => s.id === id)!));
+    this.commit();
+    if (this.sel.length !== before) this.emitSelect(); else this.emitChange();
   }
 
   /* ---------- Thứ tự lớp ---------- */

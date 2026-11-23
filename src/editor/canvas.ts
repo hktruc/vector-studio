@@ -1,5 +1,5 @@
 import type { Shape } from '../core/types';
-import type { DocStore } from '../core/store';
+import { selectable, type DocStore } from '../core/store';
 import { rad } from '../core/geometry';
 import { shapeToSVG } from '../core/export';
 import { bboxOf, moveShapes, rotateShapes, scaleShapes, shapeTransform } from '../core/transform';
@@ -69,6 +69,8 @@ export class EditorCanvas {
     el('rect', { x: 0, y: 0, width: cw, height: ch, fill: '#fff' }, svg);
     el('rect', { x: 0, y: 0, width: cw, height: ch, fill: 'url(#grid)' }, svg);
     for (const s of shapes) {
+      if (s.hidden) continue;
+      if (s.locked) { el('g', { 'pointer-events': 'none' }, svg).innerHTML = shapeToSVG(s); continue; }
       const g = el('g', { 'data-sid': s.id, style: 'cursor:move' }, svg);
       g.innerHTML = shapeToSVG(s);
       el('rect', { x: 0, y: 0, width: s.w, height: s.h, fill: 'transparent', transform: shapeTransform(s) }, g);
@@ -165,7 +167,7 @@ export class EditorCanvas {
       if (!d.moved && Math.hypot(p.x - d.start.x, p.y - d.start.y) * this.scale() < 3) return;
       d.moved = true;
       const r = rectOf(d.start, p);
-      const hit = this.store.doc.shapes.filter((s) => { const b = bboxOf([s]); return b.x1 >= r.x0 && b.x0 <= r.x1 && b.y1 >= r.y0 && b.y0 <= r.y1; }).map((s) => s.id);
+      const hit = this.store.doc.shapes.filter(selectable).filter((s) => { const b = bboxOf([s]); return b.x1 >= r.x0 && b.x0 <= r.x1 && b.y1 >= r.y0 && b.y0 <= r.y1; }).map((s) => s.id);
       this.store.selectMany([...d.base, ...hit]);
       this.render();
       return;
@@ -180,7 +182,7 @@ export class EditorCanvas {
       this.guides = [];
       if (this.smartGuides && !e.altKey) {
         const b = bboxOf(d.s0), ids = new Set(d.list.map((s) => s.id));
-        const others = this.store.doc.shapes.filter((s) => !ids.has(s.id)).map((s) => bboxOf([s]));
+        const others = this.store.doc.shapes.filter((s) => !ids.has(s.id) && !s.hidden).map((s) => bboxOf([s]));
         const { cw, ch } = this.store.doc;
         const r = snapToGuides({ x0: b.x0 + rx, y0: b.y0 + ry, x1: b.x1 + rx, y1: b.y1 + ry }, others, { x0: 0, y0: 0, x1: cw, y1: ch }, 6 / this.scale());
         if (r.dx !== null) dx = rx + r.dx;
