@@ -25,6 +25,8 @@ export interface ShapeDef {
   type: string;
   params: ParamDef[];
   parts: (w: number, h: number, p: Record<string, any>) => Part[];
+  /** Thông số cần nhân theo tỉ lệ khi phóng to/thu nhỏ đều (ví dụ cỡ chữ). */
+  scaleParams?: string[];
 }
 
 /** Một hình cụ thể nằm trên khung. */
@@ -43,10 +45,15 @@ export interface Shape {
   sw: number;
   op: number;
   p: Record<string, any>;
+  /** Mã nhóm (không có = hình lẻ). Các hình cùng gid luôn nằm liền nhau trong doc.shapes. */
+  gid?: number;
 }
 
+/** Phiên bản định dạng dữ liệu hiện tại. v2: thêm Shape.gid (nhóm hình). */
+export const DOC_VERSION = 2;
+
 export interface Doc {
-  v: 1; // phiên bản định dạng dữ liệu
+  v: typeof DOC_VERSION; // phiên bản định dạng dữ liệu
   cw: number;
   ch: number;
   sizeIdx: number;

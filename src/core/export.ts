@@ -21,14 +21,31 @@ export function shapeToSVG(s: Shape): string {
   return `<g transform="${shapeTransform(s)}"${op}>${inner}</g>`;
 }
 
+/** Nhiều hình -> SVG; các hình cùng nhóm (liền nhau, cùng gid) được bọc chung một thẻ <g>. */
+export function shapesToSVG(list: Shape[]): string {
+  let out = '';
+  for (let i = 0; i < list.length; ) {
+    const g = list[i].gid;
+    let j = i + 1;
+    if (g !== undefined) while (j < list.length && list[j].gid === g) j++;
+    const body = list.slice(i, j).map(shapeToSVG).join('');
+    out += g !== undefined ? `<g>${body}</g>` : body;
+    i = j;
+  }
+  return out;
+}
+
 export function exportDocument(doc: Doc, transparent = true): string {
   const bg = transparent ? '' : `<rect width="${doc.cw}" height="${doc.ch}" fill="#FFFFFF"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${doc.cw} ${doc.ch}" width="${doc.cw}" height="${doc.ch}">${bg}${doc.shapes.map(shapeToSVG).join('')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${doc.cw} ${doc.ch}" width="${doc.cw}" height="${doc.ch}">${bg}${shapesToSVG(doc.shapes)}</svg>`;
+}
+
+/** Xuất riêng các hình đang chọn (một hoặc nhiều), cắt sát khung. */
+export function exportShapes(list: Shape[]): string {
+  const b = bboxOf(list), pad = 2;
+  const w = Math.ceil(b.x1 - b.x0 + pad * 2), h = Math.ceil(b.y1 - b.y0 + pad * 2);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><g transform="translate(${f(-b.x0 + pad)} ${f(-b.y0 + pad)})">${shapesToSVG(list)}</g></svg>`;
 }
 
 /** Xuất riêng một hình, cắt sát khung. */
-export function exportShape(s: Shape): string {
-  const b = bboxOf([s]), pad = 2;
-  const w = Math.ceil(b.x1 - b.x0 + pad * 2), h = Math.ceil(b.y1 - b.y0 + pad * 2);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><g transform="translate(${f(-b.x0 + pad)} ${f(-b.y0 + pad)})">${shapeToSVG(s)}</g></svg>`;
-}
+export const exportShape = (s: Shape) => exportShapes([s]);

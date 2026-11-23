@@ -1,6 +1,6 @@
 import { DocStore } from '../core/store';
 import { SIZES } from '../core/constants';
-import { exportDocument, exportShape } from '../core/export';
+import { exportDocument, exportShapes } from '../core/export';
 import { registerBuiltinShapes } from '../shapes';
 import { saveTextFile } from '../platform/download';
 import { EditorCanvas } from './canvas';
@@ -41,8 +41,8 @@ export function startApp() {
     out(exportDocument(store.doc, $<HTMLInputElement>('transp').checked), 'hinh-ve-slide.svg');
   };
   $('exSel').onclick = () => {
-    const s = store.selected; if (!s) return msg('Hãy chọn một hình trước.');
-    out(exportShape(s), 'hinh-don.svg');
+    const list = store.selection; if (!list.length) return msg('Hãy chọn một hoặc nhiều hình trước.');
+    out(exportShapes(list), list.length === 1 ? 'hinh-don.svg' : 'nhom-hinh.svg');
   };
   $('cpCode').onclick = async () => {
     const box = $<HTMLTextAreaElement>('code');
@@ -58,11 +58,14 @@ export function startApp() {
     const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
     if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? store.redo() : store.undo(); return; }
     if (mod && k === 'y') { e.preventDefault(); store.redo(); return; }
-    const s = store.selected; if (!s) return;
+    if (mod && k === 'a') { e.preventDefault(); store.selectAll(); return; }
+    const list = store.selection; if (!list.length) return;
+    if (e.key === 'Escape') { store.select(null); return; }
+    if (mod && k === 'g') { e.preventDefault(); e.shiftKey ? store.ungroup() : store.group(); return; }
     if (mod && k === 'd') { e.preventDefault(); store.duplicate(); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); store.remove(); return; }
     const st = e.shiftKey ? 10 : 1;
     const m = ({ ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] } as Record<string, number[]>)[e.key];
-    if (m) { e.preventDefault(); s.x += m[0]; s.y += m[1]; store.emitChange(); props.syncNumbers(); clearTimeout(keyT); keyT = window.setTimeout(() => store.commit(), 400); }
+    if (m) { e.preventDefault(); list.forEach((s) => { s.x += m[0]; s.y += m[1]; }); store.emitChange(); props.syncNumbers(); clearTimeout(keyT); keyT = window.setTimeout(() => store.commit(), 400); }
   });
 }

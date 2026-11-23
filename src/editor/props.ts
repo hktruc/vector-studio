@@ -4,7 +4,7 @@ import { getShape } from '../shapes/registry';
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const $ = <T extends HTMLElement>(root: HTMLElement, id: string) => root.querySelector<T>('#' + id)!;
 
-const HELP = `<div class="empty"><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
+const HELP = `<div class="empty"><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
 
 /** Bảng thuộc tính bên phải, dựng lại mỗi khi đổi hình được chọn. */
 export class PropsPanel {
@@ -24,7 +24,7 @@ export class PropsPanel {
 
   private build() {
     const P = this.root, st = this.store, s = st.selected;
-    if (!s) { P.innerHTML = HELP; return; }
+    if (!s) { if (st.sel.length) this.buildMulti(); else P.innerHTML = HELP; return; }
     const def = getShape(s.t);
     const redraw = () => st.emitChange();
     let h = `<div class="grp">Vị trí & kích thước</div><div class="r3"><div><label>X</label><input type="number" id="nx"></div><div><label>Y</label><input type="number" id="ny"></div><div><label>Xoay °</label><input type="number" id="nr"></div></div><div class="r2"><div><label>Rộng</label><input type="number" id="nw"></div><div><label>Cao</label><input type="number" id="nh"></div></div>`;
@@ -38,6 +38,7 @@ export class PropsPanel {
       }
     }
     h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="fx">Lật ngang</button><button class="b alt sm" id="fy">Lật dọc</button><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button></div>`;
+    h += `<p class="hint">Giữ Shift và bấm hình khác để chọn thêm, rồi bấm <b>Nhóm</b> (Ctrl+G).</p>`;
     P.innerHTML = h;
     this.syncNumbers();
 
@@ -64,6 +65,29 @@ export class PropsPanel {
     });
     $(P, 'fx').onclick = () => { s.fx = (s.fx * -1) as 1 | -1; st.commit(); redraw(); };
     $(P, 'fy').onclick = () => { s.fy = (s.fy * -1) as 1 | -1; st.commit(); redraw(); };
+    $(P, 'up').onclick = () => st.moveLayer(1); $(P, 'dn').onclick = () => st.moveLayer(-1);
+    $(P, 'top').onclick = () => st.moveLayer('top'); $(P, 'bot').onclick = () => st.moveLayer('bottom');
+    $(P, 'dp').onclick = () => st.duplicate(); $(P, 'dl').onclick = () => st.remove();
+  }
+
+  /** Bảng khi chọn nhiều hình hoặc một nhóm: màu chung, nhóm/bỏ nhóm, thứ tự lớp. */
+  private buildMulti() {
+    const P = this.root, st = this.store, list = st.selection, first = list[0];
+    const grouped = st.selectedGroup !== undefined, anyGroup = list.some((x) => x.gid !== undefined);
+    const redraw = () => st.emitChange();
+    let h = `<div class="grp">${grouped ? 'Nhóm' : 'Đang chọn'} · ${list.length} hình</div><div class="btnrow">`;
+    if (!grouped) h += `<button class="b sm" id="grp">Nhóm (Ctrl+G)</button>`;
+    if (anyGroup) h += `<button class="b alt sm" id="ugrp">Bỏ nhóm (Ctrl+Shift+G)</button>`;
+    h += `</div><p class="hint">Kéo để dời cả ${grouped ? 'nhóm' : 'vùng chọn'} · kéo ô vuông ở góc để phóng to/thu nhỏ đều · kéo chấm tròn để xoay. Bấm một hình trong vùng chọn (không kéo) để chọn riêng nó.</p>`;
+    h += `<div class="grp">Màu sắc (áp dụng cho tất cả)</div><div class="r2"><div><label>Màu tô</label><input type="color" id="cf" value="${first.fill}"></div><div><label>Màu viền</label><input type="color" id="cs" value="${first.stroke}"></div></div><label>Độ trong suốt <span id="opv">${Math.round(first.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${first.op}">`;
+    h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button></div>`;
+    P.innerHTML = h;
+    P.querySelector<HTMLButtonElement>('#grp')?.addEventListener('click', () => st.group());
+    P.querySelector<HTMLButtonElement>('#ugrp')?.addEventListener('click', () => st.ungroup());
+    const cf = $<HTMLInputElement>(P, 'cf'), cs = $<HTMLInputElement>(P, 'cs'), op = $<HTMLInputElement>(P, 'op');
+    cf.oninput = () => { list.forEach((x) => (x.fill = cf.value)); redraw(); }; cf.onchange = () => st.commit();
+    cs.oninput = () => { list.forEach((x) => { x.stroke = cs.value; if (!x.sw) x.sw = 4; }); redraw(); }; cs.onchange = () => st.commit();
+    op.oninput = () => { list.forEach((x) => (x.op = +op.value)); $(P, 'opv').textContent = Math.round(+op.value * 100) + '%'; redraw(); }; op.onchange = () => st.commit();
     $(P, 'up').onclick = () => st.moveLayer(1); $(P, 'dn').onclick = () => st.moveLayer(-1);
     $(P, 'top').onclick = () => st.moveLayer('top'); $(P, 'bot').onclick = () => st.moveLayer('bottom');
     $(P, 'dp').onclick = () => st.duplicate(); $(P, 'dl').onclick = () => st.remove();

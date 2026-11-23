@@ -1,5 +1,7 @@
 # Triển khai lên Cloudflare (không cần chạy trên máy)
 
+Địa chỉ hiện tại: **https://vector-studio.hktruc.workers.dev**
+
 Cloudflare sẽ tự build và đưa web lên mỗi khi bạn đẩy code lên nhánh `main` của GitHub.
 
 ## Lần đầu

@@ -25,3 +25,43 @@ export function bboxOf(list: Shape[]) {
   }
   return { x0, y0, x1, y1 };
 }
+
+/* ---------- Biến đổi nhiều hình cùng lúc (chọn nhiều / nhóm) ----------
+ * Các hàm nhận ảnh chụp ban đầu (s0) và ghi kết quả vào hình đích (out),
+ * để khi kéo chuột luôn tính từ trạng thái gốc, không bị cộng dồn sai số. */
+
+type Pick5 = Pick<Shape, 'x' | 'y' | 'w' | 'h' | 'r' | 'sw' | 'p' | 't'>;
+
+/** Dời tất cả hình một đoạn (dx, dy). */
+export function moveShapes(s0: Pick5[], out: Pick5[], dx: number, dy: number) {
+  s0.forEach((a, i) => { out[i].x = a.x + dx; out[i].y = a.y + dy; });
+}
+
+/**
+ * Phóng to/thu nhỏ đều với hệ số k quanh điểm neo (ax, ay).
+ * Chỉ phóng đều (giữ tỉ lệ) vì hình đã xoay không thể kéo giãn lệch mà vẫn giữ đúng dạng.
+ * scaleParams(t) trả về tên các thông số cũng cần nhân k (ví dụ cỡ chữ).
+ */
+export function scaleShapes(
+  s0: Pick5[], out: Pick5[], ax: number, ay: number, k: number,
+  scaleParams: (t: string) => string[] = () => [],
+) {
+  s0.forEach((a, i) => {
+    const o = out[i];
+    o.x = ax + (a.x - ax) * k; o.y = ay + (a.y - ay) * k;
+    o.w = Math.max(1, a.w * k); o.h = Math.max(1, a.h * k);
+    o.sw = Math.round(a.sw * k * 10) / 10;
+    for (const key of scaleParams(a.t))
+      if (typeof a.p[key] === 'number') o.p = { ...o.p, [key]: Math.round(a.p[key] * k * 10) / 10 };
+  });
+}
+
+/** Xoay tất cả hình một góc deg (độ) quanh tâm (cx, cy). */
+export function rotateShapes(s0: Pick5[], out: Pick5[], cx: number, cy: number, deg: number) {
+  const c = Math.cos(rad(deg)), n = Math.sin(rad(deg));
+  s0.forEach((a, i) => {
+    const dx = a.x - cx, dy = a.y - cy, o = out[i];
+    o.x = cx + dx * c - dy * n; o.y = cy + dx * n + dy * c;
+    o.r = (((a.r + deg) % 360) + 360) % 360;
+  });
+}

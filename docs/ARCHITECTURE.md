@@ -19,7 +19,14 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 
 - `DocStore` (core/store.ts): giữ `Doc`, hình đang chọn, hoàn tác/làm lại (snapshot JSON), lưu tạm vào `localStorage`. Giao diện chỉ nghe hai sự kiện: `change` (vẽ lại) và `select` (dựng lại bảng thuộc tính).
 - `ShapeDef.parts(w, h, params)` trả về các mảnh path trong hệ tọa độ cục bộ `0..w × 0..h`. Phép xoay/lật/dời do `shapeTransform` lo.
-- Định dạng tài liệu có trường `v` (phiên bản). Khi đổi cấu trúc dữ liệu, tăng `v` và viết hàm nâng cấp ở `DocStore.load`.
+- Định dạng tài liệu có trường `v` (phiên bản, hằng `DOC_VERSION`). Khi đổi cấu trúc dữ liệu, tăng `v` và thêm bước nâng cấp trong `migrateDoc` (core/store.ts).
+  - v2: thêm `Shape.gid` (nhóm hình).
+
+## Chọn nhiều & nhóm
+- `DocStore.sel` là danh sách id. Chọn một hình thuộc nhóm luôn chọn cả nhóm. `selected` chỉ trả về hình khi chọn đúng một hình lẻ; `selection` trả về tất cả.
+- Nhóm không lồng nhau: nhóm các nhóm sẽ gộp thành một nhóm phẳng. Thứ tự lớp di chuyển theo "khối" (cả nhóm một lúc).
+- Nhiều hình chỉ phóng đều (giữ tỉ lệ) vì hình đã xoay không kéo giãn lệch được mà vẫn đúng dạng. Thông số cần phóng theo (ví dụ cỡ chữ) khai báo bằng `ShapeDef.scaleParams`.
+- Khi xuất SVG, mỗi nhóm được bọc trong một thẻ `<g>` để Canva/Illustrator nhận ra nhóm.
 
 ## Điểm mở rộng đã chừa sẵn
 | Muốn thêm | Làm ở đâu |
@@ -28,7 +35,7 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 | Định dạng xuất mới (PNG, PDF, PPTX) | `src/core/export.ts` thêm hàm; nút ở `editor/app.ts` |
 | Lưu lên đám mây (Cloudflare R2/D1/KV) | thay `platform/` + `DocStore` storage adapter |
 | Nhiều trang / nhiều tài liệu | mở rộng `Doc` (mảng `pages`), nâng `v` |
-| Chọn nhiều hình, nhóm hình | `DocStore.sel` đổi thành tập id; `EditorCanvas` vẽ khung chung |
+| Chọn nhiều hình, nhóm hình | ✅ Đã làm: `DocStore.sel` là mảng id; nhóm = `Shape.gid` (các hình cùng nhóm luôn liền nhau); biến đổi nhiều hình ở `core/transform.ts` |
 | Công cụ vẽ đường (Bézier), sửa điểm neo | thêm loại hình `path` với `points` trong `p`; công cụ mới ở `editor/` |
 | Giao diện bằng framework (React/Svelte) | giữ nguyên `core/`, `shapes/`; viết lại `editor/` |
 
