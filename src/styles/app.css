@@ -57,3 +57,12 @@ textarea{width:100%;height:70px;font:11px ui-monospace,Menlo,monospace;border:1p
 .row:hover .ic,.row .ic.act{visibility:visible}
 .row .ic.act{color:#1B2A3A}
 .row .ic:hover{background:#E3DED3}
+.segs{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:11.5px;color:#7a8794;margin-bottom:6px}
+.seg{border:1px solid #cfc9bb;background:#fff;border-radius:6px;padding:2px 7px;font-size:11.5px;color:#445566}
+.seg.on{border-color:#1E6FB5;background:#1E6FB5;color:#fff}
+.pal{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.sw{position:relative;aspect-ratio:1;border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:0}
+.sw:hover{outline:2px solid #1E6FB5;outline-offset:1px}
+.sw .x{position:absolute;top:-6px;right:-6px;width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid #cfc9bb;color:#C9605A;font-size:11px;line-height:12px;display:none}
+.sw:hover .x{display:block}
+.sw.add{background:#FAF9F6;color:#1E6FB5;font-size:16px;border-style:dashed}

@@ -22,6 +22,7 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - Định dạng tài liệu có trường `v` (phiên bản, hằng `DOC_VERSION`). Khi đổi cấu trúc dữ liệu, tăng `v` và thêm bước nâng cấp trong `migrateDoc` (core/store.ts).
   - v2: thêm `Shape.gid` (nhóm hình).
   - v3: thêm `Shape.name`, `Shape.hidden`, `Shape.locked`, `Doc.gnames` (tên nhóm).
+  - v4: thêm `Shape.grad` (màu chuyển sắc).
 
 ## Chọn nhiều & nhóm
 - `DocStore.sel` là danh sách id. Chọn một hình thuộc nhóm luôn chọn cả nhóm. `selected` chỉ trả về hình khi chọn đúng một hình lẻ; `selection` trả về tất cả.
@@ -33,6 +34,11 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - Hiển thị `doc.shapes` đảo ngược (trên cùng ở đầu), nhóm là một dòng mở rộng được. Ảnh thu nhỏ vẽ bằng `shapeToSVG`.
 - Ẩn (`hidden`): không vẽ, không xuất, không chọn. Khóa (`locked`): vẫn vẽ và xuất, nhưng không chọn được (`selectable()` trong core/store.ts).
 - Tên mặc định lấy từ tên mẫu trong thư viện (`shapeLabel` ở shapes/index.ts).
+
+## Màu sắc
+- **Bộ màu thương hiệu** (`core/palette.ts`, lớp `BrandPalette`): lưu riêng trong `localStorage` (khóa `vector-studio-palette-v1`), không nằm trong tài liệu, nên dùng chung cho mọi bản vẽ. `DocStore.colorSource` lấy màu cho hình mới từ đây.
+- **Gradient** (`Shape.grad`): `shapeToSVG` tự thêm `<defs>` với `<linearGradient>`/`<radialGradient>` dùng `gradientUnits="userSpaceOnUse"` trong hệ tọa độ riêng của hình, nên xoay/lật hình thì gradient đi theo. Mỗi độ sáng tối (`shade`) có một gradient riêng. Tham số `idPrefix` tránh trùng id khi cùng một hình được vẽ nhiều lần trên trang (khung vẽ dùng `vsg`, ảnh thu nhỏ ở panel lớp dùng `lt`).
+- Gradient không phải marker/mask/filter nên vẫn đúng quy tắc "hình đặc"; nhưng Canva thường không cho đổi màu gradient, giao diện có ghi chú.
 
 ## Căn chỉnh & đường gióng (core/align.ts)
 - `alignShapes` / `distributeShapes` làm việc trên "khối" (nhóm = một khối). Chỉ có một khối thì căn theo trang.

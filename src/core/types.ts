@@ -53,13 +53,23 @@ export interface Shape {
   hidden?: boolean;
   /** Khóa: vẫn vẽ và xuất, nhưng không chọn/kéo được trên khung. */
   locked?: boolean;
+  /** Màu chuyển sắc (gradient) từ `fill` sang `grad.c2`. Không có = màu đặc. */
+  grad?: Gradient;
+}
+
+export interface Gradient {
+  type: 'linear' | 'radial';
+  c2: string;
+  /** Góc (độ) cho chuyển sắc thẳng: 0 = trái → phải, 90 = trên → dưới. */
+  a: number;
 }
 
 /**
  * Phiên bản định dạng dữ liệu hiện tại.
  * v2: thêm Shape.gid (nhóm hình). v3: thêm Shape.name/hidden/locked và Doc.gnames (tên nhóm).
+ * v4: thêm Shape.grad (màu chuyển sắc).
  */
-export const DOC_VERSION = 3;
+export const DOC_VERSION = 4;
 
 export interface Doc {
   v: typeof DOC_VERSION; // phiên bản định dạng dữ liệu

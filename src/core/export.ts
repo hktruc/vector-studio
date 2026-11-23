@@ -1,24 +1,49 @@
 import type { Doc, Shape } from './types';
-import { f } from './geometry';
+import { f, rad } from './geometry';
 import { mix } from './color';
 import { bboxOf, shapeTransform } from './transform';
 import { partsOf } from '../shapes/registry';
 
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
-/** Một hình -> chuỗi SVG (thẻ <g>). Dùng chung cho màn hình vẽ, xem trước và xuất file. */
-export function shapeToSVG(s: Shape): string {
+/**
+ * Định nghĩa gradient cho một hình, tính trong hệ tọa độ riêng của hình (0..w × 0..h),
+ * nên xoay/lật hình thì gradient xoay/lật theo. Trả về thẻ <linearGradient>/<radialGradient>.
+ */
+export function gradientDef(s: Shape, id: string, shade = 0): string {
+  const g = s.grad!;
+  const stops = `<stop offset="0" stop-color="${mix(s.fill, shade)}"/><stop offset="1" stop-color="${mix(g.c2, shade)}"/>`;
+  if (g.type === 'radial')
+    return `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${f(s.w / 2)}" cy="${f(s.h / 2)}" r="${f(Math.hypot(s.w, s.h) / 2)}">${stops}</radialGradient>`;
+  const c = Math.cos(rad(g.a)), n = Math.sin(rad(g.a)), L = (Math.abs(s.w * c) + Math.abs(s.h * n)) / 2;
+  const cx = s.w / 2, cy = s.h / 2;
+  return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${f(cx - c * L)}" y1="${f(cy - n * L)}" x2="${f(cx + c * L)}" y2="${f(cy + n * L)}">${stops}</linearGradient>`;
+}
+
+/**
+ * Một hình -> chuỗi SVG (thẻ <g>). Dùng chung cho màn hình vẽ, xem trước và xuất file.
+ * idPrefix: tiền tố id cho gradient, để nhiều bản vẽ cùng một hình trên một trang không bị trùng id.
+ */
+export function shapeToSVG(s: Shape, idPrefix = 'vsg'): string {
   const parts = partsOf(s.t, s.w, s.h, s.p);
   const op = s.op < 1 ? ` opacity="${s.op}"` : '';
   const stroke = s.sw > 0 ? ` stroke="${s.stroke}" stroke-width="${s.sw}" stroke-linejoin="round"` : '';
+  // mỗi độ sáng tối (shade) khác nhau cần một gradient riêng
+  const defs = new Map<number, string>();
+  const paint = (shade: number) => {
+    if (!s.grad) return mix(s.fill, shade);
+    if (!defs.has(shade)) defs.set(shade, `${idPrefix}${s.id}-${defs.size}`);
+    return `url(#${defs.get(shade)})`;
+  };
   const inner = parts
     .map((pt) =>
       pt.text
-        ? `<text x="${f(s.w / 2)}" y="${f(s.h / 2 + s.p.size * 0.35)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${s.p.size}" font-weight="${s.p.bold ? 700 : 400}" fill="${s.fill}">${esc(s.p.text)}</text>`
-        : `<path d="${pt.d}" fill="${mix(s.fill, pt.shade || 0)}"${pt.rule ? ` fill-rule="${pt.rule}"` : ''}${stroke}/>`,
+        ? `<text x="${f(s.w / 2)}" y="${f(s.h / 2 + s.p.size * 0.35)}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${s.p.size}" font-weight="${s.p.bold ? 700 : 400}" fill="${paint(0)}">${esc(s.p.text)}</text>`
+        : `<path d="${pt.d}" fill="${paint(pt.shade || 0)}"${pt.rule ? ` fill-rule="${pt.rule}"` : ''}${stroke}/>`,
     )
     .join('');
-  return `<g transform="${shapeTransform(s)}"${op}>${inner}</g>`;
+  const defsSVG = defs.size ? `<defs>${[...defs].map(([sh, id]) => gradientDef(s, id, sh)).join('')}</defs>` : '';
+  return `<g transform="${shapeTransform(s)}"${op}>${defsSVG}${inner}</g>`;
 }
 
 /** Nhiều hình -> SVG; các hình cùng nhóm (liền nhau, cùng gid) được bọc chung một thẻ <g>. */
@@ -29,7 +54,7 @@ export function shapesToSVG(all: Shape[]): string {
     const g = list[i].gid;
     let j = i + 1;
     if (g !== undefined) while (j < list.length && list[j].gid === g) j++;
-    const body = list.slice(i, j).map(shapeToSVG).join('');
+    const body = list.slice(i, j).map((s) => shapeToSVG(s)).join('');
     out += g !== undefined ? `<g>${body}</g>` : body;
     i = j;
   }

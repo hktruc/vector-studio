@@ -1,6 +1,6 @@
 # Lộ trình
 
-Phiên bản hiện tại (0.4): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp.
+Phiên bản hiện tại (0.5): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp, bộ màu thương hiệu + gradient.
 
 Bản chạy thật: https://vector-studio.hktruc.workers.dev
 
@@ -8,8 +8,9 @@ Bản chạy thật: https://vector-studio.hktruc.workers.dev
 - [x] Chọn nhiều hình, nhóm / bỏ nhóm (Shift+bấm, quét chọn, Ctrl+G / Ctrl+Shift+G; phóng đều và xoay cả nhóm)
 - [x] Căn chỉnh, phân bố đều, đường gióng thông minh (6 kiểu căn, phân bố ngang/dọc, đường gióng hồng khi kéo; giữ Alt để tạm tắt)
 - [x] Panel lớp (đổi tên, ẩn, khóa) — thẻ **Lớp** ở cột trái; Ctrl+Shift+H ẩn, Ctrl+Shift+L khóa
-- [ ] Màu theo bộ màu thương hiệu, lưu bộ màu
-- [ ] Gradient, bóng đổ
+- [x] Màu theo bộ màu thương hiệu, lưu bộ màu (tự lưu trong trình duyệt, dán được danh sách mã màu, hình mới lấy màu từ bộ)
+- [x] Gradient cho màu tô (thẳng có chỉnh góc, tròn)
+- [ ] Bóng đổ (cần cách làm không dùng filter để Canva vẫn đọc được)
 - [ ] Xuất PNG, PDF
 - [ ] Thêm thư viện hình: biểu đồ tròn/cột đơn giản, hình sơ đồ tổ chức, biểu tượng
 

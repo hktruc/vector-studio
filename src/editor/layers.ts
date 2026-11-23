@@ -17,7 +17,7 @@ const CARET = (open: boolean) => `<svg viewBox="0 0 10 10" width="10" height="10
 function thumb(list: Shape[]) {
   const shown = list.filter((s) => !s.hidden), src = shown.length ? shown : list;
   const b = bboxOf(src), w = Math.max(1, b.x1 - b.x0), h = Math.max(1, b.y1 - b.y0), pad = Math.max(w, h) * 0.08;
-  const body = src.map((s) => shapeToSVG({ ...s, hidden: false })).join('');
+  const body = src.map((s) => shapeToSVG({ ...s, hidden: false }, 'lt')).join('');
   return `<svg class="th" viewBox="${b.x0 - pad} ${b.y0 - pad} ${w + pad * 2} ${h + pad * 2}">${body}</svg>`;
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DocStore, migrateDoc } from '../src/core/store';
 import { exportDocument, exportShapes } from '../src/core/export';
 import { registerBuiltinShapes, shapeLabel } from '../src/shapes';
+import { DOC_VERSION } from '../src/core/types';
 
 registerBuiltinShapes();
 
@@ -90,10 +91,8 @@ describe('khóa hình', () => {
   });
 });
 
-describe('nâng cấp dữ liệu lên v3', () => {
-  it('tài liệu v1 và v2 đều mở được ở v3', () => {
-    expect(migrateDoc({ v: 1, shapes: [] })?.v).toBe(3);
-    expect(migrateDoc({ v: 2, shapes: [] })?.v).toBe(3);
-    expect(migrateDoc({ v: 3, shapes: [] })?.v).toBe(3);
+describe('nâng cấp dữ liệu', () => {
+  it('tài liệu mọi phiên bản cũ đều mở được ở bản mới nhất', () => {
+    for (let v = 1; v <= DOC_VERSION; v++) expect(migrateDoc({ v, shapes: [] })?.v).toBe(DOC_VERSION);
   });
 });

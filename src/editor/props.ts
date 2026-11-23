@@ -1,5 +1,8 @@
 import type { DocStore } from '../core/store';
 import { getShape } from '../shapes/registry';
+import type { Shape } from '../core/types';
+import type { BrandPalette } from '../core/palette';
+import { mix } from '../core/color';
 
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const $ = <T extends HTMLElement>(root: HTMLElement, id: string) => root.querySelector<T>('#' + id)!;
@@ -37,8 +40,13 @@ function wireAlign(P: HTMLElement, st: DocStore) {
 
 /** Bảng thuộc tính bên phải, dựng lại mỗi khi đổi hình được chọn. */
 export class PropsPanel {
-  constructor(private root: HTMLElement, private store: DocStore) {
+  /** Bấm ô màu trong bộ màu thương hiệu thì áp vào đâu. */
+  private target: 'fill' | 'c2' | 'stroke' = 'fill';
+  private showCodes = false;
+
+  constructor(private root: HTMLElement, private store: DocStore, private palette: BrandPalette) {
     store.on('select', () => this.build());
+    palette.onChange(() => this.build());
     this.build();
   }
 
@@ -58,7 +66,7 @@ export class PropsPanel {
     const redraw = () => st.emitChange();
     let h = `<div class="grp">Vị trí & kích thước</div><div class="r3"><div><label>X</label><input type="number" id="nx"></div><div><label>Y</label><input type="number" id="ny"></div><div><label>Xoay °</label><input type="number" id="nr"></div></div><div class="r2"><div><label>Rộng</label><input type="number" id="nw"></div><div><label>Cao</label><input type="number" id="nh"></div></div>`;
     h += alignHTML(true, false);
-    h += `<div class="grp">Màu sắc</div><div class="r2"><div><label>Màu tô</label><input type="color" id="cf" value="${s.fill}"></div><div><label>Màu viền</label><input type="color" id="cs" value="${s.stroke}"></div></div><label>Độ dày viền <span id="swv">${s.sw}</span></label><input type="range" id="sw" min="0" max="30" step="1" value="${s.sw}"><label>Độ trong suốt <span id="opv">${Math.round(s.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${s.op}">`;
+    h += this.colorHTML([s], true);
     if (def.params.length) {
       h += `<div class="grp">Thông số hình</div>`;
       for (const q of def.params) {
@@ -82,11 +90,7 @@ export class PropsPanel {
     num('nr', 'r', (v) => ((v % 360) + 360) % 360);
     num('nw', 'w', (v) => Math.max(6, v)); num('nh', 'h', (v) => Math.max(6, v));
 
-    const cf = $<HTMLInputElement>(P, 'cf'), cs = $<HTMLInputElement>(P, 'cs'), sw = $<HTMLInputElement>(P, 'sw'), op = $<HTMLInputElement>(P, 'op');
-    cf.oninput = () => { s.fill = cf.value; redraw(); }; cf.onchange = () => st.commit();
-    cs.oninput = () => { s.stroke = cs.value; if (!s.sw) { s.sw = 4; sw.value = '4'; $(P, 'swv').textContent = '4'; } redraw(); }; cs.onchange = () => st.commit();
-    sw.oninput = () => { s.sw = +sw.value; $(P, 'swv').textContent = sw.value; redraw(); }; sw.onchange = () => st.commit();
-    op.oninput = () => { s.op = +op.value; $(P, 'opv').textContent = Math.round(s.op * 100) + '%'; redraw(); }; op.onchange = () => st.commit();
+    this.wireColors([s], true);
 
     P.querySelectorAll<HTMLInputElement>('[data-p]').forEach((e) => {
       const k = e.dataset.p!;
@@ -103,27 +107,103 @@ export class PropsPanel {
 
   /** Bảng khi chọn nhiều hình hoặc một nhóm: màu chung, nhóm/bỏ nhóm, thứ tự lớp. */
   private buildMulti() {
-    const P = this.root, st = this.store, list = st.selection, first = list[0];
+    const P = this.root, st = this.store, list = st.selection;
     const grouped = st.selectedGroup !== undefined, anyGroup = list.some((x) => x.gid !== undefined);
-    const redraw = () => st.emitChange();
     let h = `<div class="grp">${grouped ? 'Nhóm' : 'Đang chọn'} · ${list.length} hình</div><div class="btnrow">`;
     if (!grouped) h += `<button class="b sm" id="grp">Nhóm (Ctrl+G)</button>`;
     if (anyGroup) h += `<button class="b alt sm" id="ugrp">Bỏ nhóm (Ctrl+Shift+G)</button>`;
     h += `</div><p class="hint">Kéo để dời cả ${grouped ? 'nhóm' : 'vùng chọn'} · kéo ô vuông ở góc để phóng to/thu nhỏ đều · kéo chấm tròn để xoay. Bấm một hình trong vùng chọn (không kéo) để chọn riêng nó.</p>`;
     const nu = st.selectionUnits;
     h += alignHTML(nu === 1, nu >= 3);
-    h += `<div class="grp">Màu sắc (áp dụng cho tất cả)</div><div class="r2"><div><label>Màu tô</label><input type="color" id="cf" value="${first.fill}"></div><div><label>Màu viền</label><input type="color" id="cs" value="${first.stroke}"></div></div><label>Độ trong suốt <span id="opv">${Math.round(first.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${first.op}">`;
+    h += this.colorHTML(list, false);
     h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button></div>`;
     P.innerHTML = h;
     wireAlign(P, st);
     P.querySelector<HTMLButtonElement>('#grp')?.addEventListener('click', () => st.group());
     P.querySelector<HTMLButtonElement>('#ugrp')?.addEventListener('click', () => st.ungroup());
-    const cf = $<HTMLInputElement>(P, 'cf'), cs = $<HTMLInputElement>(P, 'cs'), op = $<HTMLInputElement>(P, 'op');
-    cf.oninput = () => { list.forEach((x) => (x.fill = cf.value)); redraw(); }; cf.onchange = () => st.commit();
-    cs.oninput = () => { list.forEach((x) => { x.stroke = cs.value; if (!x.sw) x.sw = 4; }); redraw(); }; cs.onchange = () => st.commit();
-    op.oninput = () => { list.forEach((x) => (x.op = +op.value)); $(P, 'opv').textContent = Math.round(+op.value * 100) + '%'; redraw(); }; op.onchange = () => st.commit();
+    this.wireColors(list, false);
     $(P, 'up').onclick = () => st.moveLayer(1); $(P, 'dn').onclick = () => st.moveLayer(-1);
     $(P, 'top').onclick = () => st.moveLayer('top'); $(P, 'bot').onclick = () => st.moveLayer('bottom');
     $(P, 'dp').onclick = () => st.duplicate(); $(P, 'dl').onclick = () => st.remove();
+  }
+
+  /* ---------- Màu sắc: kiểu tô, gradient, bộ màu thương hiệu ---------- */
+
+  private colorHTML(list: Shape[], single: boolean) {
+    const a = list[0], g = a.grad, pal = this.palette.colors;
+    if (this.target === 'c2' && !g) this.target = 'fill';
+    const ft = g ? g.type : 'solid';
+    let h = `<div class="grp">Màu sắc${single ? '' : ' (áp dụng cho tất cả)'}</div>`;
+    h += `<label>Kiểu tô</label><select id="ftype" style="width:100%"><option value="solid"${ft === 'solid' ? ' selected' : ''}>Màu đặc</option><option value="linear"${ft === 'linear' ? ' selected' : ''}>Chuyển sắc thẳng (gradient)</option><option value="radial"${ft === 'radial' ? ' selected' : ''}>Chuyển sắc tròn (gradient)</option></select>`;
+    h += `<div class="${g ? 'r3' : 'r2'}"><div><label>${g ? 'Màu 1' : 'Màu tô'}</label><input type="color" id="cf" value="${a.fill}"></div>`;
+    if (g) h += `<div><label>Màu 2</label><input type="color" id="c2" value="${g.c2}"></div>`;
+    h += `<div><label>Màu viền</label><input type="color" id="cs" value="${a.stroke}"></div></div>`;
+    if (g) {
+      if (g.type === 'linear') h += `<label>Hướng chuyển sắc <span id="gav">${g.a}°</span></label><input type="range" id="ga" min="0" max="345" step="15" value="${g.a}">`;
+      h += `<div class="btnrow"><button class="b alt sm" id="gsw">⇄ Đảo hai màu</button></div><p class="hint">Lưu ý: Canva hiển thị được gradient trong SVG nhưng thường <b>không cho đổi màu</b> gradient. Muốn đổi màu trong Canva thì dùng màu đặc.</p>`;
+    }
+    // bộ màu thương hiệu
+    const tg = (k: string, l: string) => `<button class="seg${this.target === k ? ' on' : ''}" data-tg="${k}">${l}</button>`;
+    h += `<label>Bộ màu thương hiệu</label><div class="segs"><span>Bấm ô màu để áp vào:</span>${tg('fill', g ? 'Màu 1' : 'Màu tô')}${g ? tg('c2', 'Màu 2') : ''}${tg('stroke', 'Viền')}</div>`;
+    h += `<div class="pal">${pal.map((c, i) => `<button class="sw" data-sw="${c}" title="${c}" style="background:${c}"><span class="x" data-rm="${i}" title="Bỏ màu này khỏi bộ">×</span></button>`).join('')}<button class="sw add" id="padd" title="Thêm màu đang dùng vào bộ màu">+</button></div>`;
+    h += `<div class="btnrow"><button class="b alt sm" id="pcode">${this.showCodes ? 'Ẩn mã màu' : 'Nhập / chép mã màu'}</button></div>`;
+    if (this.showCodes) h += `<textarea id="ptext" placeholder="Dán mã màu, ví dụ: #1E6FB5, #E0A458, 5FA87A">${pal.join(', ')}</textarea><div class="btnrow"><button class="b sm" id="psave">Lưu bộ màu</button><button class="b alt sm" id="preset">Về mặc định</button></div><p class="hint">Dán danh sách mã màu từ bộ nhận diện thương hiệu (cách nhau bằng dấu phẩy, khoảng trắng hoặc xuống dòng). Bộ màu được lưu trong trình duyệt này và dùng chung cho mọi bản vẽ.</p>`;
+    if (single) h += `<label>Độ dày viền <span id="swv">${a.sw}</span></label><input type="range" id="sw" min="0" max="30" step="1" value="${a.sw}">`;
+    h += `<label>Độ trong suốt <span id="opv">${Math.round(a.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${a.op}">`;
+    return h;
+  }
+
+  private wireColors(list: Shape[], single: boolean) {
+    const P = this.root, st = this.store, pal = this.palette;
+    const redraw = () => st.emitChange();
+    const q = <T extends HTMLElement>(id: string) => P.querySelector<T>('#' + id);
+    const sw = q<HTMLInputElement>('sw');
+    const setStroke = (c: string) => list.forEach((x) => { x.stroke = c; if (!x.sw) { x.sw = 4; if (sw) { sw.value = '4'; $(P, 'swv').textContent = '4'; } } });
+    const setColor = (k: 'fill' | 'c2' | 'stroke', c: string) => {
+      if (k === 'fill') list.forEach((x) => (x.fill = c));
+      else if (k === 'c2') list.forEach((x) => { if (x.grad) x.grad = { ...x.grad, c2: c }; });
+      else setStroke(c);
+    };
+    const live = (id: string, k: 'fill' | 'c2' | 'stroke') => {
+      const e = q<HTMLInputElement>(id); if (!e) return;
+      e.oninput = () => { setColor(k, e.value); redraw(); };
+      e.onchange = () => st.commit();
+    };
+    live('cf', 'fill'); live('c2', 'c2'); live('cs', 'stroke');
+
+    q<HTMLSelectElement>('ftype')!.onchange = (e) => {
+      const v = (e.target as HTMLSelectElement).value;
+      list.forEach((x) => {
+        if (v === 'solid') delete x.grad;
+        else x.grad = { type: v as 'linear' | 'radial', c2: x.grad?.c2 ?? mix(x.fill, 0.55), a: x.grad?.a ?? 90 };
+      });
+      st.commit(); this.build(); redraw();
+    };
+    const ga = q<HTMLInputElement>('ga');
+    if (ga) { ga.oninput = () => { list.forEach((x) => { if (x.grad) x.grad = { ...x.grad, a: +ga.value }; }); $(P, 'gav').textContent = ga.value + '°'; redraw(); }; ga.onchange = () => st.commit(); }
+    const gsw = q('gsw');
+    if (gsw) gsw.onclick = () => { list.forEach((x) => { if (x.grad) { const c = x.fill; x.fill = x.grad.c2; x.grad = { ...x.grad, c2: c }; } }); st.commit(); this.build(); redraw(); };
+
+    P.querySelectorAll<HTMLButtonElement>('[data-tg]').forEach((b) => (b.onclick = () => { this.target = b.dataset.tg as any; this.build(); }));
+    P.querySelectorAll<HTMLButtonElement>('[data-sw]').forEach((b) => (b.onclick = (e) => {
+      const rm = (e.target as HTMLElement).dataset.rm;
+      if (rm !== undefined) { pal.remove(+rm); return; }
+      setColor(this.target, b.dataset.sw!); st.commit(); this.build(); redraw();
+    }));
+    q('padd')!.onclick = () => {
+      const a = list[0];
+      pal.add(this.target === 'stroke' ? a.stroke : this.target === 'c2' && a.grad ? a.grad.c2 : a.fill);
+    };
+    q('pcode')!.onclick = () => { this.showCodes = !this.showCodes; this.build(); };
+    const psave = q('psave');
+    if (psave) psave.onclick = () => { const n = pal.setFromText(q<HTMLTextAreaElement>('ptext')!.value); if (!n) alert('Không tìm thấy mã màu hợp lệ (dạng #RRGGBB).'); };
+    const preset = q('preset');
+    if (preset) preset.onclick = () => pal.reset();
+
+    if (sw) { sw.oninput = () => { list.forEach((x) => (x.sw = +sw.value)); $(P, 'swv').textContent = sw.value; redraw(); }; sw.onchange = () => st.commit(); }
+    const op = q<HTMLInputElement>('op')!;
+    op.oninput = () => { list.forEach((x) => (x.op = +op.value)); $(P, 'opv').textContent = Math.round(+op.value * 100) + '%'; redraw(); };
+    op.onchange = () => st.commit();
+    void single;
   }
 }

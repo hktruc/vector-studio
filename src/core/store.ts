@@ -14,6 +14,7 @@ export function migrateDoc(o: any): Doc | null {
   if (!o || typeof o !== 'object' || !Array.isArray(o.shapes)) return null;
   if (o.v === 1) o = { ...o, v: 2 };
   if (o.v === 2) o = { ...o, v: 3 };
+  if (o.v === 3) o = { ...o, v: 4 }; // v3 → v4: thêm grad (không bắt buộc)
   if (o.v !== DOC_VERSION) return null;
   return o as Doc;
 }
@@ -42,6 +43,9 @@ export class DocStore {
   private onChange = new Set<Listener>();
   private onSelect = new Set<Listener>();
   private colorIdx = 0;
+
+  /** Nguồn màu cho hình mới (mặc định là bảng màu có sẵn; app gắn bộ màu thương hiệu vào đây). */
+  colorSource: () => string[] = () => COLORS;
 
   constructor(private storage: Pick<Storage, 'getItem' | 'setItem'> | null = null) {
     this.load();
@@ -117,7 +121,7 @@ export class DocStore {
     const s: Shape = {
       id: this.doc.seq++, t: it.t, x: this.doc.cw / 2 + n * 14, y: this.doc.ch / 2 + n * 14, w: it.w, h: it.h,
       r: 0, fx: 1, fy: 1,
-      fill: it.t === 'text' ? '#1B2A3A' : COLORS[this.colorIdx++ % COLORS.length],
+      fill: it.t === 'text' ? '#1B2A3A' : (() => { const c = this.colorSource(); return c[this.colorIdx++ % c.length]; })(),
       stroke: '#12497A', sw: 0, op: 1,
       p: { ...defaultParams(it.t), ...(it.p || {}) },
       name: it.n,

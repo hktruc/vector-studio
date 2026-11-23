@@ -7,6 +7,7 @@ import { EditorCanvas } from './canvas';
 import { buildLibrary } from './library';
 import { PropsPanel } from './props';
 import { LayersPanel } from './layers';
+import { BrandPalette } from '../core/palette';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -14,7 +15,9 @@ export function startApp() {
   registerBuiltinShapes();
   const store = new DocStore(window.localStorage);
   const canvas = new EditorCanvas($('stage') as unknown as SVGSVGElement, store);
-  const props = new PropsPanel($('props'), store);
+  const palette = new BrandPalette(window.localStorage);
+  store.colorSource = () => palette.cycle();
+  const props = new PropsPanel($('props'), store, palette);
   canvas.onGeometryChange = () => props.syncNumbers();
   buildLibrary($('lib'), (it) => store.addFromLibrary(it));
   const layers = new LayersPanel($('layers'), store);
