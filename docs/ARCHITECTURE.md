@@ -26,6 +26,7 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
   - v3: thêm `Shape.name`, `Shape.hidden`, `Shape.locked`, `Doc.gnames` (tên nhóm).
   - v4: thêm `Shape.grad` (màu chuyển sắc).
   - v5: thêm `Shape.label`, `Shape.lc` (chữ trên hình); loại hình `connector` (đường nối) và `image` (ảnh dán).
+  - v6: thêm loại hình `curve` (đường cong) và `path` (đường tự do, sửa điểm neo).
 
 ## Chọn nhiều & nhóm
 - `DocStore.sel` là danh sách id. Chọn một hình thuộc nhóm luôn chọn cả nhóm. `selected` chỉ trả về hình khi chọn đúng một hình lẻ; `selection` trả về tất cả.
@@ -57,6 +58,12 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - Đường nối là một `Shape` như mọi hình (đúng quy tắc 2): `p.a`, `p.b` là id hai đầu; vị trí của nó là dữ liệu suy ra, luôn được tính lại sau mỗi thay đổi.
 - Xóa hình thì đường nối dính vào nó bị xóa theo.
 - Khung vẽ được dựng lại sau mỗi lần bấm, nên khi cần biết hình dưới con trỏ ở sự kiện `dblclick` thì dùng `document.elementFromPoint`, không dùng `e.target`.
+
+## Hình sống (nhóm C)
+- **Tay nắm thông số** (`ShapeDef.handles`, xử lý chung ở `core/handles.ts`): mỗi tay nắm có `pos` (vị trí theo tọa độ riêng 0..w × 0..h) và `drag` (điểm kéo → thông số mới). Giá trị tự được kẹp theo `min/max` và làm tròn theo `step` của `ParamDef`, nên `drag` chỉ cần tính "thô". Giao diện vẽ hình thoi vàng, không cần biết hình là gì (đúng quy tắc 2).
+- **Đường tự do** (`path`): `core/pathdata.ts` đọc/ghi `d` (M L H V C S Q T A Z, cung A đổi sang Bézier), `core/pathedit.ts` lo chuyển đổi và sửa điểm. Điểm neo lưu theo tỉ lệ khung; `orig` giữ hình gốc để "quay lại dạng thông số" khi `edited` còn false.
+- **Uốn cạnh**: dời cả hai tay nắm của đoạn một lượng `d / (3t(1−t))` để điểm tại t đi đúng theo chuột (phép biến đổi tuyến tính, nên kéo từng bước nhỏ vẫn chính xác).
+- Chế độ sửa điểm neo: bấm đúp vào đường (hoặc Enter) để vào; Esc, bấm ra ngoài hoặc chọn hình khác để ra (`EditorCanvas.editPathId`).
 
 ## Đường cong (core/curve.ts, shapes/curves.ts)
 - Loại hình `curve`. Hai đầu mút lưu theo tỉ lệ khung (`x0,y0,x1,y1`), nên đổi cỡ khung là co giãn đường cong.

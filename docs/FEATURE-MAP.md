@@ -32,9 +32,9 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 | Tính năng | TT |
 |---|---|
 | Thông số riêng mỗi hình (thanh trượt) | ✅ |
-| Tay nắm kéo ngay trên khung (góc quạt, đầu mũi tên, bo góc, số tầng) | ⬜ |
-| Chuyển hình thành đường, sửa điểm neo (và quay lại dạng thông số nếu chưa sửa) | ⬜ |
-| Kéo cạnh để uốn cong cạnh | ⬜ |
+| Tay nắm kéo ngay trên khung (góc quạt, đầu mũi tên, bo góc, số tầng) | ✅ (hình thoi vàng; 16 loại hình; Shift: bước 15°) |
+| Chuyển hình thành đường, sửa điểm neo (và quay lại dạng thông số nếu chưa sửa) | ✅ (thêm/xóa điểm, nhọn ↔ trơn, tay nắm Bézier) |
+| Kéo cạnh để uốn cong cạnh | ✅ (khi đang sửa điểm neo) |
 | Đường cong parabol/Bézier với đầu mút tùy chỉnh | ✅ (tay nắm kéo trên khung, hai đầu chỉnh độc lập, đầu mút tròn/bằng/mũi tên/chấm/nhọn; phím C) |
 | Biến dạng: uốn, xoắn, kéo theo khung bao | ⬜ |
 | Kiểu "nét tay" (đường hơi lệch) cho sơ đồ phác | ⬜ |

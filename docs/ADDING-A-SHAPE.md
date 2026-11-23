@@ -29,6 +29,20 @@ Tiện ích hình học có sẵn trong `core/geometry.ts`: `Pn` (đa giác theo
 
 Mỗi mục là một "mẫu": cùng loại hình nhưng khác kích thước/thông số (ví dụ 1/2, 1/3, 1/4 hình tròn đều là loại `pie`).
 
+## 2a. (Nên làm) Tay nắm kéo trực tiếp
+
+Thêm `handles` vào khai báo để người dùng kéo ngay trên hình thay vì dùng thanh trượt:
+
+```ts
+handles: [{
+  tip: 'Kéo ngang để bo tròn góc',
+  pos: (w, h, p) => [p.r * w, 0],                // vị trí tay nắm (tọa độ riêng 0..w × 0..h)
+  drag: (w, h, p, x, y, snap) => ({ r: x / w }), // điểm đang kéo → thông số mới (tự kẹp min..max)
+}],
+```
+
+Tiện ích có sẵn trong `core/handles.ts`: `angleOf` (góc quanh tâm), `radiusOf` (khoảng cách tới tâm), `snapAngle` (bước 15° khi giữ Shift). Bộ test tự kiểm tra mọi tay nắm: kéo về đúng chỗ thì thông số không đổi.
+
 ## 2b. (Nên làm) Cho phép "gõ để thêm" tìm ra hình
 
 Thêm vài từ đồng nghĩa (không dấu) vào `SYNONYMS` trong `src/shapes/search.ts`, ví dụ `'Huy hiệu': ['badge', 'tem', 'nhan']`.
