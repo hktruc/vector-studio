@@ -1,5 +1,7 @@
 # Kiến trúc
 
+> Trước khi thêm tính năng, đọc [`DESIGN-PRINCIPLES.md`](DESIGN-PRINCIPLES.md): không chế độ, không hộp thoại chặn, mặc định tự do.
+
 ## Nguyên tắc
 1. **Tách dữ liệu khỏi giao diện.** `src/core` và `src/shapes` không dùng `document`/`window`; chạy được trong Node (nhờ vậy kiểm thử nhanh, và sau này dùng được ở server/Worker để xuất file hàng loạt).
 2. **Mọi hình là dữ liệu.** Một hình = một object JSON (`Shape`) + một định nghĩa loại hình (`ShapeDef`). Lưu, hoàn tác, xuất, chia sẻ đều làm trên JSON.
@@ -48,7 +50,7 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 | Muốn thêm | Làm ở đâu |
 |---|---|
 | Loại hình mới | `src/shapes/*.ts` + `catalog.ts` |
-| Định dạng xuất mới (PNG, PDF, PPTX) | `src/core/export.ts` thêm hàm; nút ở `editor/app.ts` |
+| Định dạng xuất mới (PDF, PPTX) | `src/core/export.ts` thêm hàm; nút ở `editor/app.ts`. PNG đã có: core tính cỡ (`rasterSize`, `sizedSVG`), `platform/raster.ts` vẽ SVG lên canvas — vẫn dùng đúng SVG xuất ra, nên PNG giống hệt SVG |
 | Lưu lên đám mây (Cloudflare R2/D1/KV) | thay `platform/` + `DocStore` storage adapter |
 | Nhiều trang / nhiều tài liệu | mở rộng `Doc` (mảng `pages`), nâng `v` |
 | Chọn nhiều hình, nhóm hình | ✅ Đã làm: `DocStore.sel` là mảng id; nhóm = `Shape.gid` (các hình cùng nhóm luôn liền nhau); biến đổi nhiều hình ở `core/transform.ts` |

@@ -1,8 +1,9 @@
 import { DocStore } from '../core/store';
 import { SIZES } from '../core/constants';
-import { exportDocument, exportShapes } from '../core/export';
+import { exportDocument, exportShapes, rasterSize, sizedSVG, svgViewSize } from '../core/export';
 import { registerBuiltinShapes } from '../shapes';
-import { saveTextFile } from '../platform/download';
+import { saveBlob, saveTextFile } from '../platform/download';
+import { svgToPng } from '../platform/raster';
 import { EditorCanvas } from './canvas';
 import { buildLibrary } from './library';
 import { PropsPanel } from './props';
@@ -51,13 +52,29 @@ export function startApp() {
     const box = $<HTMLTextAreaElement>('code'); box.value = code; $('codeBox').style.display = 'block'; box.select();
     msg('Không tải trực tiếp được: mã SVG đã hiện ở khung dưới, hãy sao chép rồi lưu thành file .svg.');
   };
+  // định dạng xuất (SVG hoặc PNG 1x/2x/4x), nhớ lựa chọn lần trước trong trình duyệt này
+  const fmt = $<HTMLSelectElement>('fmt');
+  try { const v = localStorage.getItem('vector-studio-fmt'); if (v && [...fmt.options].some((o) => o.value === v)) fmt.value = v; } catch { /* bỏ qua */ }
+  fmt.onchange = () => { try { localStorage.setItem('vector-studio-fmt', fmt.value); } catch { /* bỏ qua */ } };
+  const transparent = () => $<HTMLInputElement>('transp').checked;
+  /** Tải SVG, hoặc vẽ SVG đó thành PNG theo độ nét đang chọn. */
+  const save = async (svg: string, base: string) => {
+    if (fmt.value === 'svg') return out(svg, base + '.svg');
+    const { w, h } = svgViewSize(svg), r = rasterSize(w, h, +fmt.value);
+    try {
+      const png = await svgToPng(sizedSVG(svg, r.width, r.height), r.width, r.height, transparent() ? undefined : '#FFFFFF');
+      const name = `${base}-${r.width}x${r.height}.png`;
+      if (!saveBlob(name, png)) return msg('Trình duyệt không cho tải file.');
+      msg(`Đã tải ${name}` + (r.reduced ? ' (đã giảm độ nét cho vừa giới hạn của trình duyệt)' : ''));
+    } catch (e) { msg('Không xuất được PNG: ' + (e as Error).message); }
+  };
   $('exAll').onclick = () => {
-    if (!store.doc.shapes.length) return msg('Chưa có hình nào trong khung.');
-    out(exportDocument(store.doc, $<HTMLInputElement>('transp').checked), 'hinh-ve-slide.svg');
+    if (!store.doc.shapes.some((s) => !s.hidden)) return msg('Chưa có hình nào trong khung.');
+    save(exportDocument(store.doc, transparent()), 'hinh-ve-slide');
   };
   $('exSel').onclick = () => {
     const list = store.selection; if (!list.length) return msg('Hãy chọn một hoặc nhiều hình trước.');
-    out(exportShapes(list), list.length === 1 ? 'hinh-don.svg' : 'nhom-hinh.svg');
+    save(exportShapes(list), list.length === 1 ? 'hinh-don' : 'nhom-hinh');
   };
   $('cpCode').onclick = async () => {
     const box = $<HTMLTextAreaElement>('code');

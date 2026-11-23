@@ -76,3 +76,29 @@ export function exportShapes(all: Shape[]): string {
 
 /** Xuất riêng một hình, cắt sát khung. */
 export const exportShape = (s: Shape) => exportShapes([s]);
+
+/* ---------- Xuất ảnh PNG ---------- */
+
+/** Giới hạn số điểm ảnh an toàn cho mọi trình duyệt (Safari/iPhone ~16,7 triệu điểm ảnh). */
+export const MAX_PNG_PIXELS = 16_000_000;
+
+/**
+ * Kích thước ảnh PNG (điểm ảnh) cho một khung w×h ở độ nét `scale` (1x, 2x, 4x…).
+ * Nếu quá lớn thì tự giảm độ nét cho vừa giới hạn; `scale` trả về là độ nét thật sự dùng.
+ */
+export function rasterSize(w: number, h: number, scale: number, maxPixels = MAX_PNG_PIXELS) {
+  let k = Math.max(0.01, scale);
+  if (w * h * k * k > maxPixels) k = Math.sqrt(maxPixels / (w * h));
+  return { width: Math.max(1, Math.floor(w * k)), height: Math.max(1, Math.floor(h * k)), scale: k, reduced: k < scale };
+}
+
+/** Đặt lại width/height (điểm ảnh) cho thẻ <svg> ngoài cùng, giữ nguyên viewBox, để trình duyệt vẽ nét ở đúng cỡ đích. */
+export function sizedSVG(svg: string, width: number, height: number): string {
+  return svg.replace(/^<svg([^>]*?) width="[^"]*" height="[^"]*"/, `<svg$1 width="${width}" height="${height}"`);
+}
+
+/** Đọc kích thước (theo viewBox) của một chuỗi SVG do Vector Studio xuất ra. */
+export function svgViewSize(svg: string) {
+  const m = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+  return m ? { w: +m[1], h: +m[2] } : { w: 0, h: 0 };
+}
