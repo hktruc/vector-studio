@@ -4,11 +4,12 @@ import type { Shape } from '../core/types';
 import type { BrandPalette } from '../core/palette';
 import { mix } from '../core/color';
 import { isConnector } from '../core/connect';
+import { canConvertToPath, nodeCount } from '../core/pathedit';
 
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const $ = <T extends HTMLElement>(root: HTMLElement, id: string) => root.querySelector<T>('#' + id)!;
 
-const HELP = `<div class="empty"><b>Đổ ý ra nhanh</b><br>• <b>Bấm đúp</b> chỗ trống (hoặc phím <b>/</b>) rồi gõ “tròn”, “mũi tên”… Enter. Gõ chữ bất kỳ để thêm chữ.<br>• <b>Kéo</b> hình từ cột trái thả vào khung; <b>nhấn giữ</b> hình rồi kéo trên khung để vẽ đúng cỡ. Phím <b>R</b> chữ nhật · <b>O</b> tròn · <b>A</b> mũi tên · <b>T</b> chữ · <b>L</b> đường kẻ · <b>C</b> đường cong.<br>• <b>Đường cong:</b> chọn đường cong rồi kéo chấm xanh (đầu mút) hoặc hình thoi hồng (hướng, độ cong từng đầu) ngay trên khung.<br>• <b>Bấm đúp vào hình</b> (hoặc Enter) để gõ chữ lên hình. Khi gõ, nhấn <b>Tab</b> để tạo ý tiếp theo đã nối sẵn.<br>• Dán ảnh, mã SVG, hay danh sách chữ (Ctrl+V) thẳng vào khung.<br>• Ctrl + cuộn chuột để thu phóng, giữ phím cách rồi kéo để dời khung nhìn.<br><br><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Lớp:</b> thẻ <b>Lớp</b> ở cột trái để đổi tên, ẩn, khóa. Ctrl+Shift+H ẩn · Ctrl+Shift+L khóa hình đang chọn.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
+const HELP = `<div class="empty"><b>Đổ ý ra nhanh</b><br>• <b>Bấm đúp</b> chỗ trống (hoặc phím <b>/</b>) rồi gõ “tròn”, “mũi tên”… Enter. Gõ chữ bất kỳ để thêm chữ.<br>• <b>Kéo</b> hình từ cột trái thả vào khung; <b>nhấn giữ</b> hình rồi kéo trên khung để vẽ đúng cỡ. Phím <b>R</b> chữ nhật · <b>O</b> tròn · <b>A</b> mũi tên · <b>T</b> chữ · <b>L</b> đường kẻ · <b>C</b> đường cong.<br>• <b>Hình sống:</b> chọn hình rồi kéo <b>hình thoi vàng</b> để đổi góc quạt, đầu mũi tên, bo góc, số tầng… Nút <b>Chuyển thành đường</b> để sửa điểm neo và uốn cạnh.<br>• <b>Đường cong:</b> chọn đường cong rồi kéo chấm xanh (đầu mút) hoặc hình thoi hồng (hướng, độ cong từng đầu) ngay trên khung.<br>• <b>Bấm đúp vào hình</b> (hoặc Enter) để gõ chữ lên hình. Khi gõ, nhấn <b>Tab</b> để tạo ý tiếp theo đã nối sẵn.<br>• Dán ảnh, mã SVG, hay danh sách chữ (Ctrl+V) thẳng vào khung.<br>• Ctrl + cuộn chuột để thu phóng, giữ phím cách rồi kéo để dời khung nhìn.<br><br><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Lớp:</b> thẻ <b>Lớp</b> ở cột trái để đổi tên, ẩn, khóa. Ctrl+Shift+H ẩn · Ctrl+Shift+L khóa hình đang chọn.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
 
 /* Biểu tượng 16×16 cho các nút căn chỉnh */
 const ic = (body: string) => `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">${body}</svg>`;
@@ -41,6 +42,8 @@ function wireAlign(P: HTMLElement, st: DocStore) {
 
 /** Bảng thuộc tính bên phải, dựng lại mỗi khi đổi hình được chọn. */
 export class PropsPanel {
+  /** Gọi khi người dùng muốn sửa điểm neo của một đường (app nối với khung vẽ). */
+  onEditPath: (id: number) => void = () => {};
   /** Bấm ô màu trong bộ màu thương hiệu thì áp vào đâu. */
   private target: 'fill' | 'c2' | 'stroke' = 'fill';
   private showCodes = false;
@@ -72,8 +75,14 @@ export class PropsPanel {
     h += s.t === 'image'
       ? `<div class="grp">Ảnh</div><label>Độ trong suốt <span id="opv">${Math.round(s.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${s.op}">`
       : this.colorHTML([s], true);
+    if (s.t === 'path') {
+      const canBack = s.p.orig && !s.p.edited;
+      h += `<div class="grp">Đường tự do · ${nodeCount(s)} điểm neo</div><div class="btnrow"><button class="b sm" id="pedit">Sửa điểm neo</button>${canBack ? '<button class="b alt sm" id="prev">Quay lại dạng thông số</button>' : ''}</div>`;
+      h += `<p class="hint">Bấm đúp vào hình (hoặc Enter) để sửa: kéo điểm vuông/tròn để dời · kéo chấm hồng để chỉnh độ cong · <b>kéo cạnh để uốn cong</b> · bấm đúp lên cạnh để thêm điểm · bấm đúp lên điểm: nhọn ↔ trơn · Alt+bấm hoặc Delete: xóa điểm.${s.p.orig && s.p.edited ? '<br>Đã sửa điểm neo nên không quay lại dạng thông số được nữa (vẫn hoàn tác bằng Ctrl+Z được).' : ''}</p>`;
+    }
     if (def.params.length) {
       h += `<div class="grp">Thông số hình</div>`;
+      if (def.handles?.length) h += `<p class="hint" style="margin-top:0">Kéo <b style="color:#B98A00">hình thoi vàng</b> trên khung để chỉnh trực tiếp; thanh trượt để tinh chỉnh.</p>`;
       for (const q of def.params) {
         if (q.show && !q.show(s.p)) continue;
         if (q.type === 'text') h += `<label>${q.l}</label><input type="text" data-p="${q.k}" value="${esc(s.p[q.k])}">`;
@@ -82,7 +91,7 @@ export class PropsPanel {
         else h += `<label>${q.l} <span id="pv_${q.k}">${s.p[q.k]}</span></label><input type="range" data-p="${q.k}" min="${q.min}" max="${q.max}" step="${q.step}" value="${s.p[q.k]}">`;
       }
     }
-    h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="fx">Lật ngang</button><button class="b alt sm" id="fy">Lật dọc</button><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button></div>`;
+    h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="fx">Lật ngang</button><button class="b alt sm" id="fy">Lật dọc</button><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button>${canConvertToPath(s) ? '<button class="b alt sm" id="cvt" title="Biến hình thành các điểm neo để sửa tự do; chưa sửa thì quay lại được">Chuyển thành đường</button>' : ''}</div>`;
     h += `<p class="hint">Giữ Shift và bấm hình khác để chọn thêm, rồi bấm <b>Nhóm</b> (Ctrl+G).</p>`;
     P.innerHTML = h;
     wireAlign(P, st);
@@ -122,6 +131,9 @@ export class PropsPanel {
     $(P, 'up').onclick = () => st.moveLayer(1); $(P, 'dn').onclick = () => st.moveLayer(-1);
     $(P, 'top').onclick = () => st.moveLayer('top'); $(P, 'bot').onclick = () => st.moveLayer('bottom');
     $(P, 'dp').onclick = () => st.duplicate(); $(P, 'dl').onclick = () => st.remove();
+    P.querySelector<HTMLButtonElement>('#cvt')?.addEventListener('click', () => { if (st.convertToPath()) this.onEditPath(s.id); });
+    P.querySelector<HTMLButtonElement>('#pedit')?.addEventListener('click', () => this.onEditPath(s.id));
+    P.querySelector<HTMLButtonElement>('#prev')?.addEventListener('click', () => st.revertPath(s.id));
   }
 
   /** Bảng khi chọn nhiều hình hoặc một nhóm: màu chung, nhóm/bỏ nhóm, thứ tự lớp. */
@@ -137,9 +149,10 @@ export class PropsPanel {
     if (shapesN >= 2) h += `<div class="grp">Sơ đồ</div><div class="btnrow"><button class="b sm" id="conn" title="Nối các hình đang chọn thành chuỗi (trái → phải)">Nối các hình</button></div><label>Tự bố trí</label><div class="btnrow"><button class="b alt sm" data-lay="tree" title="Cây: theo đường nối, gốc bên trái">🌳 Cây</button><button class="b alt sm" data-lay="ring" title="Vòng: xếp đều quanh tâm">◯ Vòng</button><button class="b alt sm" data-lay="grid" title="Lưới: xếp hàng ngay ngắn">▦ Lưới</button></div>`;
     h += alignHTML(nu === 1, nu >= 3);
     h += this.colorHTML(list, false);
-    h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button></div>`;
+    h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button><button class="b alt sm" id="cvt">Chuyển thành đường</button></div>`;
     P.innerHTML = h;
     wireAlign(P, st);
+    P.querySelector<HTMLButtonElement>('#cvt')?.addEventListener('click', () => st.convertToPath());
     P.querySelector<HTMLButtonElement>('#conn')?.addEventListener('click', () => st.connectSelection());
     P.querySelectorAll<HTMLButtonElement>('[data-lay]').forEach((b) => (b.onclick = () => st.autoLayout(b.dataset.lay as any)));
     P.querySelector<HTMLButtonElement>('#grp')?.addEventListener('click', () => st.group());

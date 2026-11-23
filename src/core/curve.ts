@@ -1,6 +1,8 @@
 import type { Shape } from './types';
 import { rad } from './geometry';
 import { strokeOutline, type Cap, type XY } from './connect';
+import { toLocal, toWorldPt } from './transform';
+export { toLocal, toWorldPt };
 
 /**
  * Đường cong tự do (Bézier bậc ba hoặc parabol) với đầu mút tùy chỉnh. Thuần dữ liệu.
@@ -59,17 +61,6 @@ export function curvePath(w: number, h: number, p: Record<string, any>): string 
 
 /** Lề cần chừa quanh đường cong để nét dày và đầu mút không tràn ra ngoài khung. */
 export const curvePad = (p: Record<string, any>) => Math.max(10, (p.th ?? 4) * 3.5) * (p.hs ?? 1) * 0.7 + (p.th ?? 4) + 2;
-
-/* ---------- Đổi tọa độ trang ↔ tọa độ riêng của hình ---------- */
-
-export function toLocal(s: Shape, x: number, y: number): XY {
-  const c = Math.cos(rad(-s.r)), n = Math.sin(rad(-s.r)), dx = x - s.x, dy = y - s.y;
-  return [(dx * c - dy * n) * s.fx + s.w / 2, (dx * n + dy * c) * s.fy + s.h / 2];
-}
-export function toWorldPt(s: Shape, lx: number, ly: number): XY {
-  const ax = (lx - s.w / 2) * s.fx, ay = (ly - s.h / 2) * s.fy, c = Math.cos(rad(s.r)), n = Math.sin(rad(s.r));
-  return [s.x + ax * c - ay * n, s.y + ax * n + ay * c];
-}
 
 /** Vị trí các tay nắm trên khung (tọa độ trang) để vẽ và kéo. */
 export function curveHandles(s: Shape): Partial<Record<CurveKey, XY>> {

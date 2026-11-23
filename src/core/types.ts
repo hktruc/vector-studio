@@ -35,6 +35,21 @@ export interface ShapeDef {
   scaleParams?: string[];
   /** Gọi sau mỗi thay đổi để hình tự chỉnh khung (ví dụ đường cong co khung ôm sát). */
   refit?: (s: Shape) => void;
+  /** Tay nắm kéo trực tiếp trên khung để đổi thông số (thanh trượt chỉ để tinh chỉnh). */
+  handles?: HandleDef[];
+}
+
+/**
+ * Một tay nắm thông số (hình thoi vàng trên khung). Tọa độ là hệ riêng của hình (0..w × 0..h).
+ * drag trả về các thông số mới; giá trị được tự kẹp trong min..max và làm tròn theo step của ParamDef.
+ */
+export interface HandleDef {
+  /** Vị trí tay nắm. */
+  pos: (w: number, h: number, p: Record<string, any>) => [number, number];
+  /** Kéo tới điểm (x, y) → thông số mới. snap: đang bắt điểm (Shift hoặc Bắt lưới) — ví dụ làm tròn góc 15°. */
+  drag: (w: number, h: number, p: Record<string, any>, x: number, y: number, snap: boolean) => Record<string, number>;
+  /** Chú thích khi rê chuột lên tay nắm. */
+  tip: string;
 }
 
 /** Một hình cụ thể nằm trên khung. */
@@ -81,8 +96,9 @@ export interface Gradient {
  * v2: thêm Shape.gid (nhóm hình). v3: thêm Shape.name/hidden/locked và Doc.gnames (tên nhóm).
  * v4: thêm Shape.grad (màu chuyển sắc).
  * v5: thêm Shape.label/lc (chữ trên hình), loại hình 'connector' (đường nối) và 'image' (ảnh dán vào).
+ * v6: thêm loại hình 'curve' (đường cong) và 'path' (đường tự do, sửa điểm neo).
  */
-export const DOC_VERSION = 5;
+export const DOC_VERSION = 6;
 
 export interface Doc {
   v: typeof DOC_VERSION; // phiên bản định dạng dữ liệu

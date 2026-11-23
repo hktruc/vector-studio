@@ -6,6 +6,7 @@ import { isConnector, syncConnectors } from './connect';
 import { bboxOf } from './transform';
 import { layout, type LayoutKind } from './layout';
 import { textWidth } from './text';
+import { convertToPath as toPath, revertPath as fromPath, canConvertToPath } from './pathedit';
 
 type Listener = () => void;
 
@@ -20,6 +21,7 @@ export function migrateDoc(o: any): Doc | null {
   if (o.v === 2) o = { ...o, v: 3 };
   if (o.v === 3) o = { ...o, v: 4 }; // v3 → v4: thêm grad (không bắt buộc)
   if (o.v === 4) o = { ...o, v: 5 }; // v4 → v5: thêm label/lc, hình 'connector', 'image' (đều mới, không cần đổi dữ liệu cũ)
+  if (o.v === 5) o = { ...o, v: 6 }; // v5 → v6: thêm hình 'curve', 'path' (mới, không đổi dữ liệu cũ)
   if (o.v !== DOC_VERSION) return null;
   return o as Doc;
 }
@@ -212,6 +214,23 @@ export class DocStore {
     this.connect(src.id, n.id, conn ? { style: conn.p.style, th: conn.p.th, sa: conn.p.sa, ea: conn.p.ea } : {});
     this.sel = [n.id]; this.emitSelect();
     return n;
+  }
+
+  /* ---------- Hình sống: chuyển thành đường ---------- */
+
+  /** Chuyển các hình đang chọn thành đường tự do (sửa điểm neo được). Trả về số hình đã chuyển. */
+  convertToPath(): number {
+    let n = 0;
+    for (const s of this.selection) if (canConvertToPath(s) && toPath(s)) { delete s.label; n++; }
+    if (n) { this.commit(); this.emitSelect(); }
+    return n;
+  }
+  /** Quay lại hình có thông số (chỉ khi chưa sửa điểm neo). */
+  revertPath(id: number): boolean {
+    const s = this.doc.shapes.find((x) => x.id === id);
+    if (!s || !fromPath(s)) return false;
+    this.commit(); this.emitSelect();
+    return true;
   }
 
   /* ---------- Tự bố trí ---------- */

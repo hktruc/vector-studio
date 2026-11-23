@@ -65,3 +65,14 @@ export function rotateShapes(s0: Pick5[], out: Pick5[], cx: number, cy: number, 
     o.r = (((a.r + deg) % 360) + 360) % 360;
   });
 }
+
+/* ---------- Đổi tọa độ trang ↔ tọa độ riêng của hình (0..w × 0..h, trước khi xoay/lật) ---------- */
+
+export function toLocal(s: Shape, x: number, y: number): [number, number] {
+  const c = Math.cos(rad(-s.r)), n = Math.sin(rad(-s.r)), dx = x - s.x, dy = y - s.y;
+  return [(dx * c - dy * n) * s.fx + s.w / 2, (dx * n + dy * c) * s.fy + s.h / 2];
+}
+export function toWorldPt(s: Shape, lx: number, ly: number): [number, number] {
+  const ax = (lx - s.w / 2) * s.fx, ay = (ly - s.h / 2) * s.fy, c = Math.cos(rad(s.r)), n = Math.sin(rad(s.r));
+  return [s.x + ax * c - ay * n, s.y + ax * n + ay * c];
+}

@@ -39,6 +39,8 @@ export function startApp() {
 
   // gợi ý nhỏ ở góc khung vẽ (không chặn thao tác)
   const toast = $('toast');
+  canvas.onPathEdit = (id) => { toast.textContent = id !== null ? 'Đang sửa điểm neo: kéo điểm/tay nắm, kéo cạnh để uốn, bấm đúp cạnh để thêm điểm · Esc để xong' : ''; toast.hidden = id === null; };
+  props.onEditPath = (id) => canvas.enterPathEdit(id);
   canvas.onArm = (it) => { toast.textContent = it ? `Kéo trên khung để vẽ “${it.n}” (Shift: giữ tỉ lệ) · Esc để thôi` : ''; toast.hidden = !it; };
 
   // ô "gõ để thêm": bấm đúp chỗ trống hoặc phím /
@@ -143,12 +145,15 @@ export function startApp() {
     if (mod && k === '0') { e.preventDefault(); canvas.fit(); return; }
     if (mod && k === '1') { e.preventDefault(); canvas.zoomTo(1); return; }
     if (e.key === 'Escape' && canvas.armed) { canvas.arm(null); return; }
+    if (e.key === 'Escape' && canvas.editPathId !== null) { canvas.exitPathEdit(); return; }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && canvas.deleteSelectedNode()) { e.preventDefault(); return; }
     if (e.key === '/') { e.preventDefault(); qaAt = canvas.lastPointer ?? canvas.viewCenter(); const r = $('stage').getBoundingClientRect(); qa.open(canvas.lastPointer ? lastClient.x : r.left + r.width / 2 - 150, canvas.lastPointer ? lastClient.y : r.top + r.height / 3); return; }
     if (!mod && !e.altKey && DRAW_KEYS[k]) { const it = libItem(DRAW_KEYS[k]); if (it) { e.preventDefault(); canvas.arm(canvas.armed === it ? null : it); } return; }
     const list = store.selection; if (!list.length) return;
     if (e.key === 'Escape') { store.select(null); return; }
     const one = store.selected;
     if (e.key === 'Tab' && one && !isConnector(one)) { e.preventDefault(); const n = store.addNext(one.id); if (n) startText(n.id); return; }
+    if ((e.key === 'Enter' || e.key === 'F2') && one?.t === 'path') { e.preventDefault(); canvas.enterPathEdit(one.id); return; }
     if ((e.key === 'Enter' || e.key === 'F2') && one && !isConnector(one) && one.t !== 'image' && one.t !== 'curve') { e.preventDefault(); canvas.editLabel(one.id); return; }
     if (mod && k === 'g') { e.preventDefault(); e.shiftKey ? store.ungroup() : store.group(); return; }
     if (mod && e.shiftKey && k === 'h') { e.preventDefault(); store.setHidden(store.sel, true); return; }

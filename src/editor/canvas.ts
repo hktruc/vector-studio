@@ -9,10 +9,14 @@ import { isConnector } from '../core/connect';
 import { fitText } from '../core/text';
 import { fitBox, panBy, stepZoom, toWorld, zoomAt, type Camera } from '../core/camera';
 import { curveHandles, placeCurve, setCurveHandle, type CurveKey } from '../core/curve';
+import { applyHandle, handlePositions, handlesOf } from '../core/handles';
+import { bendSegment, deleteNode, insertNode, localParts, moveHandle, moveNode, nearestSegment, pathNodesWorld, segmentLocal, toggleSmooth, type NodeRef } from '../core/pathedit';
+import { segment, segmentCount, type XY } from '../core/pathdata';
 
 const NS = 'http://www.w3.org/2000/svg';
 const BLUE = '#1E6FB5';
 const GUIDE = '#E0338A';
+const GOLD = '#F2B705';
 function el(n: string, a: Record<string, string | number>, p?: Element) {
   const e = document.createElementNS(NS, n);
   for (const k in a) e.setAttribute(k, String(a[k]));
@@ -42,6 +46,12 @@ type Drag =
   | { mode: 'pan'; sx: number; sy: number; cam0: Camera; moved: boolean }
   /** kéo tay nắm của đường cong (đầu mút, hướng, đỉnh) */
   | { mode: 'curve'; key: CurveKey; start: Pt; moved: boolean }
+  /** kéo tay nắm thông số (hình thoi vàng) */
+  | { mode: 'param'; i: number; start: Pt; moved: boolean }
+  /** sửa điểm neo: dời điểm ('p') hoặc tay nắm vào/ra ('i'/'o') */
+  | { mode: 'pnode'; ref: NodeRef; which: 'p' | 'i' | 'o'; start: Pt; moved: boolean }
+  /** kéo cạnh để uốn cong */
+  | { mode: 'bend'; pi: number; si: number; k: number; t: number; q0: [XY, XY, XY, XY]; start: Pt; moved: boolean }
   /** hai ngón tay: thu phóng + kéo khung nhìn */
   | { mode: 'pinch'; d0: number; m0: Pt; cam0: Camera; moved: boolean };
 
@@ -64,6 +74,12 @@ export class EditorCanvas {
   spaceHeld = false;
   private touches = new Map<number, Pt>();
   private editingId: number | null = null;
+  /** Đường đang sửa điểm neo (bấm đúp vào đường để vào, Esc / bấm ra ngoài để xong). */
+  editPathId: number | null = null;
+  /** Điểm neo đang chọn (phím Delete để xóa). */
+  nodeSel: NodeRef | null = null;
+  /** Gọi khi vào/ra chế độ sửa điểm neo. */
+  onPathEdit: (id: number | null) => void = () => {};
   /** Vị trí con trỏ gần nhất trên khung (tọa độ trang), để dán / gõ thêm đúng chỗ. */
   lastPointer: Pt | null = null;
 
@@ -80,6 +96,8 @@ export class EditorCanvas {
 
   constructor(private svg: SVGSVGElement, private store: DocStore) {
     store.on('change', () => this.render());
+    // chọn hình khác thì thôi sửa điểm neo
+    store.on('select', () => { if (this.editPathId !== null && (store.selected?.id !== this.editPathId)) this.exitPathEdit(); });
     svg.addEventListener('pointerdown', (e) => this.down(e));
     svg.addEventListener('pointermove', (e) => this.move(e));
     svg.addEventListener('pointerup', (e) => this.up(e));
@@ -175,7 +193,8 @@ export class EditorCanvas {
     }
     const one = this.store.selected, list = this.store.selection;
     if (one && isConnector(one)) this.drawConnectorSel(one);
-    else if (one) { this.drawSelection(one); if (one.t === 'curve') this.drawCurveHandles(one); }
+    else if (one && one.id === this.editPathId && one.t === 'path') this.drawPathEdit(one);
+    else if (one) { this.drawSelection(one); if (one.t === 'curve') this.drawCurveHandles(one); else this.drawParamHandles(one); }
     else if (list.length) this.drawMulti(list);
     for (const g of this.guides) {
       const [x1, y1, x2, y2] = g.dir === 'v' ? [g.at, g.a, g.at, g.b] : [g.a, g.at, g.b, g.at];
@@ -201,6 +220,62 @@ export class EditorCanvas {
     const hand: [number, number, string][] = [[-1, -1, 'nwse'], [0, -1, 'ns'], [1, -1, 'nesw'], [1, 0, 'ew'], [1, 1, 'nwse'], [0, 1, 'ns'], [-1, 1, 'nesw'], [-1, 0, 'ew']];
     for (const [a, b, c] of hand)
       el('rect', { x: (a * s.w) / 2 - hs / 2, y: (b * s.h) / 2 - hs / 2, width: hs, height: hs, fill: '#fff', stroke: BLUE, 'stroke-width': 1.6 * k, 'data-h': `${a},${b}`, style: `cursor:${c}-resize` }, g);
+  }
+
+  /** Tay nắm thông số: hình thoi vàng, kéo để đổi góc quạt, đầu mũi tên, bo góc, số tầng… */
+  private drawParamHandles(s: Shape) {
+    const k = 1 / this.cam.z, defs = handlesOf(s.t), r = 6.5 * k;
+    handlePositions(s).forEach(([x, y], i) => {
+      el('path', { d: `M${x} ${y - r}L${x + r} ${y}L${x} ${y + r}L${x - r} ${y}Z`, fill: GOLD, stroke: '#1B2A3A', 'stroke-width': 1.3 * k, 'data-ph': i, style: 'cursor:pointer' }, this.svg)
+        .appendChild(Object.assign(document.createElementNS(NS, 'title'), { textContent: defs[i].tip }));
+    });
+  }
+
+  /** Chế độ sửa điểm neo: vùng bấm cho từng cạnh (kéo để uốn), điểm neo, tay nắm Bézier. */
+  private drawPathEdit(s: Shape) {
+    const k = 1 / this.cam.z, svg = this.svg, W = (p: XY) => toWorldPtCanvas(s, p);
+    el('rect', { x: -s.w / 2, y: -s.h / 2, width: s.w, height: s.h, fill: 'none', stroke: BLUE, 'stroke-opacity': 0.35, 'stroke-width': k, 'stroke-dasharray': `${4 * k} ${4 * k}`, transform: `translate(${s.x} ${s.y}) rotate(${s.r})`, 'pointer-events': 'none' }, svg);
+    localParts(s).forEach((pt, pi) => pt.subs.forEach((sp, si) => {
+      for (let i = 0; i < segmentCount(sp); i++) {
+        const q = segment(sp, i).map(W);
+        const d = `M${q[0].join(' ')} C${q[1].join(' ')} ${q[2].join(' ')} ${q[3].join(' ')}`;
+        el('path', { d, fill: 'none', stroke: BLUE, 'stroke-width': 1.5 * k, 'pointer-events': 'none' }, svg);
+        el('path', { d, fill: 'none', stroke: 'transparent', 'stroke-width': 12 * k, 'data-seg': `${pi},${si},${i}`, style: 'cursor:copy' }, svg)
+          .appendChild(Object.assign(document.createElementNS(NS, 'title'), { textContent: 'Kéo để uốn cong cạnh · bấm đúp để thêm điểm neo' }));
+      }
+    }));
+    for (const n of pathNodesWorld(s)) {
+      const key = `${n.ref.pi},${n.ref.si},${n.ref.ni}`;
+      for (const w of ['i', 'o'] as const) {
+        const h = n[w]; if (!h) continue;
+        el('line', { x1: n.p[0], y1: n.p[1], x2: h[0], y2: h[1], stroke: GUIDE, 'stroke-width': k, 'pointer-events': 'none' }, svg);
+        el('circle', { cx: h[0], cy: h[1], r: 4.5 * k, fill: '#fff', stroke: GUIDE, 'stroke-width': 1.5 * k, 'data-pc': `${key},${w}`, style: 'cursor:move' }, svg);
+      }
+    }
+    for (const n of pathNodesWorld(s)) {
+      const on = this.nodeSel && this.nodeSel.pi === n.ref.pi && this.nodeSel.si === n.ref.si && this.nodeSel.ni === n.ref.ni;
+      const r = 5 * k, a = { fill: on ? BLUE : '#fff', stroke: BLUE, 'stroke-width': 1.6 * k, 'data-pn': `${n.ref.pi},${n.ref.si},${n.ref.ni}`, style: 'cursor:move' };
+      const e = n.smooth ? el('circle', { cx: n.p[0], cy: n.p[1], r, ...a }, svg) : el('rect', { x: n.p[0] - r, y: n.p[1] - r, width: 2 * r, height: 2 * r, ...a }, svg);
+      e.appendChild(Object.assign(document.createElementNS(NS, 'title'), { textContent: 'Kéo để dời · bấm đúp: nhọn ↔ trơn · Alt+bấm hoặc Delete: xóa điểm' }));
+    }
+  }
+
+  /** Vào chế độ sửa điểm neo của một đường. */
+  enterPathEdit(id: number) {
+    const s = this.store.doc.shapes.find((x) => x.id === id); if (!s || s.t !== 'path') return;
+    this.store.select(id);
+    this.editPathId = id; this.nodeSel = null; this.render(); this.onPathEdit(id);
+  }
+  exitPathEdit() {
+    if (this.editPathId === null) return;
+    this.editPathId = null; this.nodeSel = null; this.render(); this.onPathEdit(null);
+  }
+  /** Xóa điểm neo đang chọn (phím Delete). Trả về true nếu đã xóa. */
+  deleteSelectedNode(): boolean {
+    const s = this.store.selected;
+    if (!s || s.id !== this.editPathId || !this.nodeSel) return false;
+    if (deleteNode(s, this.nodeSel)) { this.nodeSel = null; this.store.commit(); this.store.emitSelect(); }
+    return true;
   }
 
   /** Tay nắm đường cong: chấm tròn ở hai đầu mút, hình thoi ở điểm điều khiển (kéo để đổi hướng/độ cong). */
@@ -278,6 +353,26 @@ export class EditorCanvas {
       return;
     }
     const t = e.target as Element;
+    // chế độ sửa điểm neo
+    if (this.editPathId !== null) {
+      const sel = st.selected;
+      const pc = t.getAttribute?.('data-pc'), pn = t.getAttribute?.('data-pn'), sg = t.getAttribute?.('data-seg');
+      if (sel && pc) { const [a, b, c, w] = pc.split(','); this.drag = { mode: 'pnode', ref: { pi: +a, si: +b, ni: +c }, which: w as 'i' | 'o', start: p, moved: false }; capture(); return; }
+      if (sel && pn) {
+        const [a, b, c] = pn.split(',').map(Number), ref = { pi: a, si: b, ni: c };
+        if (e.altKey) { if (deleteNode(sel, ref)) { this.nodeSel = null; st.commit(); st.emitSelect(); } return; }
+        this.nodeSel = ref; this.render();
+        this.drag = { mode: 'pnode', ref, which: 'p', start: p, moved: false }; capture(); return;
+      }
+      if (sel && sg) {
+        const [a, b, c] = sg.split(',').map(Number), q0 = segmentLocal(sel, a, b, c), near = nearestSegment(sel, p.x, p.y);
+        if (q0) { this.drag = { mode: 'bend', pi: a, si: b, k: c, t: near.pi === a && near.si === b && near.k === c ? near.t : 0.5, q0, start: p, moved: false }; capture(); return; }
+      }
+      const onSelf = t.closest?.('[data-sid]')?.getAttribute('data-sid') === String(this.editPathId);
+      if (!onSelf) this.exitPathEdit();
+    }
+    const ph = t.getAttribute?.('data-ph');
+    if (ph !== null && ph !== undefined && st.selected) { this.drag = { mode: 'param', i: +ph, start: p, moved: false }; capture(); return; }
     const ch = t.getAttribute?.('data-ch') as CurveKey | null;
     if (ch && st.selected?.t === 'curve') { this.drag = { mode: 'curve', key: ch, start: p, moved: false }; capture(); return; }
     const h = t.getAttribute?.('data-h');
@@ -342,9 +437,22 @@ export class EditorCanvas {
       return;
     }
     d.moved = true;
+    const snapOn = (e.shiftKey || this.snapToGrid) && !this.free;
     if (d.mode === 'curve') {
       const s = this.store.selected; if (!s) return;
       setCurveHandle(s, d.key, this.sn(p.x), this.sn(p.y));
+    } else if (d.mode === 'param') {
+      const s = this.store.selected; if (!s) return;
+      applyHandle(s, d.i, p.x, p.y, snapOn);
+    } else if (d.mode === 'pnode') {
+      const s = this.store.selected; if (!s) return;
+      if (d.which === 'p') moveNode(s, d.ref, this.sn(p.x), this.sn(p.y)); else moveHandle(s, d.ref, d.which, this.sn(p.x), this.sn(p.y));
+    } else if (d.mode === 'bend') {
+      const s = this.store.selected; if (!s) return;
+      // q0 tính theo khung lúc bắt đầu kéo; khung tự co sau mỗi bước nên lấy lại tọa độ gốc theo trang
+      bendSegment(s, d.pi, d.si, d.k, d.t, d.q0, p.x - d.start.x, p.y - d.start.y);
+      // phép uốn là tuyến tính nên cộng từng bước nhỏ vẫn đúng; lấy lại dáng hiện tại (khung có thể vừa tự co)
+      d.q0 = segmentLocal(s, d.pi, d.si, d.k)!; d.start = p;
     } else if (d.mode === 'move') {
       if (!d.list.length) return;
       // ưu tiên đường gióng (thẳng hàng với hình khác/trang); trục nào không bắt được thì bắt lưới theo tâm hình đầu tiên
@@ -405,7 +513,8 @@ export class EditorCanvas {
     if (d.mode === 'pan') { this.svg.style.cursor = this.armed ? 'crosshair' : ''; return; }
     if (d.mode === 'draw') { this.finishDraw(d); return; }
     if (d.mode === 'marquee') { if (d.moved) this.render(); return; }
-    if (d.moved) this.store.commit();
+    // cập nhật bảng bên phải (thanh trượt, số điểm neo, nút "quay lại dạng thông số")
+    if (d.moved) { this.store.commit(); if (d.mode === 'param' || d.mode === 'pnode' || d.mode === 'bend') this.store.emitSelect(); }
     else if (d.mode === 'move' && d.clickId !== undefined && !e.shiftKey) this.store.select(d.clickId);
   }
 
@@ -438,10 +547,23 @@ export class EditorCanvas {
   private dbl(e: MouseEvent) {
     if (this.armed || this.editingId !== null) return;
     // khung vẽ được dựng lại sau mỗi lần bấm nên e.target có thể đã bị thay; hỏi lại phần tử đang nằm dưới con trỏ
-    const sidEl = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('[data-sid]');
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    if (this.editPathId !== null) {
+      const s = this.store.selected, pn = under?.getAttribute('data-pn'), sg = under?.getAttribute('data-seg');
+      if (s && pn) { const [a, b, c] = pn.split(',').map(Number); toggleSmooth(s, { pi: a, si: b, ni: c }); this.store.commit(); this.store.emitSelect(); return; }
+      if (s && sg) {
+        const p = this.toCanvas(e), [a, b, c] = sg.split(',').map(Number), near = nearestSegment(s, p.x, p.y);
+        const r = insertNode(s, a, b, c, near.pi === a && near.si === b && near.k === c ? near.t : 0.5);
+        if (r) { this.nodeSel = r; this.store.commit(); this.store.emitSelect(); }
+        return;
+      }
+      if (under?.closest?.('[data-sid]')?.getAttribute('data-sid') === String(this.editPathId)) return;
+    }
+    const sidEl = under?.closest?.('[data-sid]');
     if (sidEl) {
       const s = this.store.doc.shapes.find((x) => x.id === Number(sidEl.getAttribute('data-sid')));
-      if (s && !isConnector(s) && s.t !== 'image' && s.t !== 'curve') this.editLabel(s.id);
+      if (s?.t === 'path') this.enterPathEdit(s.id); // bấm đúp vào đường: sửa điểm neo
+      else if (s && !isConnector(s) && s.t !== 'image' && s.t !== 'curve') this.editLabel(s.id);
       return;
     }
     this.onDoubleClickEmpty(this.toCanvas(e), e.clientX, e.clientY);
@@ -491,4 +613,10 @@ const defaultsOf = (it: LibItem) => { try { const o: Record<string, any> = {}; g
 
 function rectOf(a: Pt, b: Pt) {
   return { x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) };
+}
+
+/** Đổi tọa độ riêng của hình sang tọa độ trang (dùng khi vẽ điểm neo). */
+function toWorldPtCanvas(s: Shape, p: XY): XY {
+  const ax = (p[0] - s.w / 2) * s.fx, ay = (p[1] - s.h / 2) * s.fy, c = Math.cos(rad(s.r)), n = Math.sin(rad(s.r));
+  return [s.x + ax * c - ay * n, s.y + ax * n + ay * c];
 }
