@@ -35,7 +35,10 @@ type Drag =
 export class EditorCanvas {
   private drag: Drag | null = null;
   private guides: Guide[] = [];
-  snapToGrid = true;
+  /** Mặc định tắt (nguyên tắc "mặc định tự do"); bật trên thanh công cụ khi cần chính xác. */
+  snapToGrid = false;
+  /** Đang giữ Alt: tạm tắt mọi bắt điểm (lưới, góc, đường gióng). */
+  private free = false;
   /** Đường gióng thông minh khi kéo (giữ Alt để tạm tắt). */
   smartGuides = true;
   /** Gọi khi vị trí / kích thước đổi trong lúc kéo (để cập nhật ô số bên phải). */
@@ -56,7 +59,7 @@ export class EditorCanvas {
     const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(this.svg.getScreenCTM()!.inverse());
     return { x: q.x, y: q.y };
   }
-  private sn(v: number) { return this.snapToGrid ? Math.round(v / 10) * 10 : v; }
+  private sn(v: number) { return this.snapToGrid && !this.free ? Math.round(v / 10) * 10 : v; }
 
   render() {
     const { cw, ch, shapes } = this.store.doc, svg = this.svg;
@@ -162,6 +165,7 @@ export class EditorCanvas {
     const d = this.drag;
     if (!d) return;
     const p = this.toCanvas(e);
+    this.free = e.altKey;
     if (d.mode === 'marquee') {
       d.cur = p;
       if (!d.moved && Math.hypot(p.x - d.start.x, p.y - d.start.y) * this.scale() < 3) return;
@@ -192,7 +196,7 @@ export class EditorCanvas {
       moveShapes(d.s0, d.list, dx, dy);
     } else if (d.mode === 'grot') {
       let a = ((Math.atan2(p.y - d.c.y, p.x - d.c.x) - Math.atan2(d.start.y - d.c.y, d.start.x - d.c.x)) * 180) / Math.PI;
-      if (e.shiftKey || this.snapToGrid) a = Math.round(a / 15) * 15;
+      if ((e.shiftKey || this.snapToGrid) && !this.free) a = Math.round(a / 15) * 15;
       rotateShapes(d.s0, d.list, d.c.x, d.c.y, a);
     } else if (d.mode === 'gsize') {
       const vx = d.start.x - d.anchor.x, vy = d.start.y - d.anchor.y, L = vx * vx + vy * vy || 1;
@@ -203,7 +207,7 @@ export class EditorCanvas {
       if (!s) return;
       if (d.mode === 'rot') {
         let a = (Math.atan2(p.y - s0.y, p.x - s0.x) * 180) / Math.PI + 90;
-        if (e.shiftKey || this.snapToGrid) a = Math.round(a / 15) * 15;
+        if ((e.shiftKey || this.snapToGrid) && !this.free) a = Math.round(a / 15) * 15;
         s.r = ((Math.round(a) % 360) + 360) % 360;
       } else {
         const [hx, hy] = d.h.split(',').map(Number);

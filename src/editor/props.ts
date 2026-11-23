@@ -147,7 +147,7 @@ export class PropsPanel {
     h += `<label>Bộ màu thương hiệu</label><div class="segs"><span>Bấm ô màu để áp vào:</span>${tg('fill', g ? 'Màu 1' : 'Màu tô')}${g ? tg('c2', 'Màu 2') : ''}${tg('stroke', 'Viền')}</div>`;
     h += `<div class="pal">${pal.map((c, i) => `<button class="sw" data-sw="${c}" title="${c}" style="background:${c}"><span class="x" data-rm="${i}" title="Bỏ màu này khỏi bộ">×</span></button>`).join('')}<button class="sw add" id="padd" title="Thêm màu đang dùng vào bộ màu">+</button></div>`;
     h += `<div class="btnrow"><button class="b alt sm" id="pcode">${this.showCodes ? 'Ẩn mã màu' : 'Nhập / chép mã màu'}</button></div>`;
-    if (this.showCodes) h += `<textarea id="ptext" placeholder="Dán mã màu, ví dụ: #1E6FB5, #E0A458, 5FA87A">${pal.join(', ')}</textarea><div class="btnrow"><button class="b sm" id="psave">Lưu bộ màu</button><button class="b alt sm" id="preset">Về mặc định</button></div><p class="hint">Dán danh sách mã màu từ bộ nhận diện thương hiệu (cách nhau bằng dấu phẩy, khoảng trắng hoặc xuống dòng). Bộ màu được lưu trong trình duyệt này và dùng chung cho mọi bản vẽ.</p>`;
+    if (this.showCodes) h += `<textarea id="ptext" placeholder="Dán mã màu, ví dụ: #1E6FB5, #E0A458, 5FA87A">${pal.join(', ')}</textarea><div class="btnrow"><button class="b sm" id="psave">Lưu bộ màu</button><button class="b alt sm" id="preset">Về mặc định</button></div><p class="err" id="perr"></p><p class="hint">Dán danh sách mã màu từ bộ nhận diện thương hiệu (cách nhau bằng dấu phẩy, khoảng trắng hoặc xuống dòng). Bộ màu được lưu trong trình duyệt này và dùng chung cho mọi bản vẽ.</p>`;
     if (single) h += `<label>Độ dày viền <span id="swv">${a.sw}</span></label><input type="range" id="sw" min="0" max="30" step="1" value="${a.sw}">`;
     h += `<label>Độ trong suốt <span id="opv">${Math.round(a.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${a.op}">`;
     return h;
@@ -196,7 +196,11 @@ export class PropsPanel {
     };
     q('pcode')!.onclick = () => { this.showCodes = !this.showCodes; this.build(); };
     const psave = q('psave');
-    if (psave) psave.onclick = () => { const n = pal.setFromText(q<HTMLTextAreaElement>('ptext')!.value); if (!n) alert('Không tìm thấy mã màu hợp lệ (dạng #RRGGBB).'); };
+    if (psave) psave.onclick = () => {
+      // không dùng hộp thoại chặn: báo lỗi ngay dưới ô nhập
+      const n = pal.setFromText(q<HTMLTextAreaElement>('ptext')!.value);
+      if (!n) { const m = q('perr'); if (m) m.textContent = 'Không tìm thấy mã màu hợp lệ (dạng #RRGGBB).'; }
+    };
     const preset = q('preset');
     if (preset) preset.onclick = () => pal.reset();
 

@@ -27,4 +27,6 @@ tests/       Kiểm thử tự động (chạy trong CI mỗi lần đẩy code)
 docs/        Tài liệu: kiến trúc, cách thêm hình, lộ trình, hướng dẫn triển khai
 ```
 
+Đọc trước tiên: [`docs/DESIGN-PRINCIPLES.md`](docs/DESIGN-PRINCIPLES.md) (nguyên tắc "đổ não ra giấy") · [`docs/FEATURE-MAP.md`](docs/FEATURE-MAP.md) (bản đồ tính năng).
+
 Đọc tiếp: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/ADDING-A-SHAPE.md`](docs/ADDING-A-SHAPE.md) · [`docs/ROADMAP.md`](docs/ROADMAP.md) · [`docs/DEPLOY-CLOUDFLARE.md`](docs/DEPLOY-CLOUDFLARE.md)
