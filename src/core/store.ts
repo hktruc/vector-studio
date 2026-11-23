@@ -1,6 +1,7 @@
 import { DOC_VERSION, type Doc, type LibItem, type Shape } from './types';
 import { COLORS, SIZES, STORAGE_KEY } from './constants';
 import { defaultParams } from '../shapes/registry';
+import { alignShapes, distributeShapes, unitsOf, type AlignMode } from './align';
 
 type Listener = () => void;
 
@@ -182,6 +183,23 @@ export class DocStore {
     }
     this.doc.shapes = u.flat(); this.commit(); this.emitChange();
   }
+  /* ---------- Căn chỉnh ---------- */
+
+  /** Căn vùng chọn; chọn một hình/một nhóm thì căn theo trang. */
+  align(mode: AlignMode) {
+    const list = this.selection; if (!list.length) return;
+    alignShapes(list, mode, { x0: 0, y0: 0, x1: this.doc.cw, y1: this.doc.ch });
+    this.commit(); this.emitChange();
+  }
+  /** Phân bố đều theo chiều ngang ('h') hoặc dọc ('v'); cần ≥ 3 khối. */
+  distribute(axis: 'h' | 'v'): boolean {
+    const ok = distributeShapes(this.selection, axis);
+    if (ok) { this.commit(); this.emitChange(); }
+    return ok;
+  }
+  /** Số khối (hình lẻ hoặc nhóm) trong vùng chọn. */
+  get selectionUnits() { return unitsOf(this.selection).length; }
+
   setCanvasSize(idx: number) {
     this.doc.sizeIdx = idx; this.doc.cw = SIZES[idx][1]; this.doc.ch = SIZES[idx][2]; this.commit(); this.emitChange();
   }

@@ -4,9 +4,11 @@ import { rad } from '../core/geometry';
 import { shapeToSVG } from '../core/export';
 import { bboxOf, moveShapes, rotateShapes, scaleShapes, shapeTransform } from '../core/transform';
 import { getShape } from '../shapes/registry';
+import { snapToGuides, type Guide } from '../core/align';
 
 const NS = 'http://www.w3.org/2000/svg';
 const BLUE = '#1E6FB5';
+const GUIDE = '#E0338A';
 function el(n: string, a: Record<string, string | number>, p?: Element) {
   const e = document.createElementNS(NS, n);
   for (const k in a) e.setAttribute(k, String(a[k]));
@@ -32,7 +34,10 @@ type Drag =
 /** Khung vẽ: hiển thị tài liệu và xử lý chọn / kéo / đổi cỡ / xoay. */
 export class EditorCanvas {
   private drag: Drag | null = null;
+  private guides: Guide[] = [];
   snapToGrid = true;
+  /** Đường gióng thông minh khi kéo (giữ Alt để tạm tắt). */
+  smartGuides = true;
   /** Gọi khi vị trí / kích thước đổi trong lúc kéo (để cập nhật ô số bên phải). */
   onGeometryChange: () => void = () => {};
 
@@ -71,6 +76,13 @@ export class EditorCanvas {
     const one = this.store.selected, list = this.store.selection;
     if (one) this.drawSelection(one);
     else if (list.length) this.drawMulti(list);
+    if (this.guides.length) {
+      const k = 1 / this.scale();
+      for (const g of this.guides) {
+        const [x1, y1, x2, y2] = g.dir === 'v' ? [g.at, g.a, g.at, g.b] : [g.a, g.at, g.b, g.at];
+        el('line', { x1, y1, x2, y2, stroke: GUIDE, 'stroke-width': k, 'pointer-events': 'none' }, svg);
+      }
+    }
     const d = this.drag;
     if (d?.mode === 'marquee' && d.moved) {
       const k = 1 / this.scale(), r = rectOf(d.start, d.cur);
@@ -162,9 +174,19 @@ export class EditorCanvas {
     if (!d.moved && Math.hypot(p.x - d.start.x, p.y - d.start.y) * this.scale() < 3) return;
     d.moved = true;
     if (d.mode === 'move') {
-      // bắt lưới theo tâm hình đầu tiên, các hình khác dời cùng một đoạn
-      const a = d.s0[0];
-      const dx = this.sn(a.x + p.x - d.start.x) - a.x, dy = this.sn(a.y + p.y - d.start.y) - a.y;
+      // ưu tiên đường gióng (thẳng hàng với hình khác/trang); trục nào không bắt được thì bắt lưới theo tâm hình đầu tiên
+      const a = d.s0[0], rx = p.x - d.start.x, ry = p.y - d.start.y;
+      let dx = this.sn(a.x + rx) - a.x, dy = this.sn(a.y + ry) - a.y;
+      this.guides = [];
+      if (this.smartGuides && !e.altKey) {
+        const b = bboxOf(d.s0), ids = new Set(d.list.map((s) => s.id));
+        const others = this.store.doc.shapes.filter((s) => !ids.has(s.id)).map((s) => bboxOf([s]));
+        const { cw, ch } = this.store.doc;
+        const r = snapToGuides({ x0: b.x0 + rx, y0: b.y0 + ry, x1: b.x1 + rx, y1: b.y1 + ry }, others, { x0: 0, y0: 0, x1: cw, y1: ch }, 6 / this.scale());
+        if (r.dx !== null) dx = rx + r.dx;
+        if (r.dy !== null) dy = ry + r.dy;
+        this.guides = r.guides;
+      }
       moveShapes(d.s0, d.list, dx, dy);
     } else if (d.mode === 'grot') {
       let a = ((Math.atan2(p.y - d.c.y, p.x - d.c.x) - Math.atan2(d.start.y - d.c.y, d.start.x - d.c.x)) * 180) / Math.PI;
@@ -203,6 +225,7 @@ export class EditorCanvas {
   private up(e: PointerEvent) {
     const d = this.drag;
     this.drag = null;
+    if (this.guides.length) { this.guides = []; this.render(); }
     if (!d) return;
     if (d.mode === 'marquee') { if (d.moved) this.render(); return; }
     if (d.moved) this.store.commit();

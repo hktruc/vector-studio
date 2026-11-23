@@ -4,7 +4,36 @@ import { getShape } from '../shapes/registry';
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const $ = <T extends HTMLElement>(root: HTMLElement, id: string) => root.querySelector<T>('#' + id)!;
 
-const HELP = `<div class="empty"><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
+const HELP = `<div class="empty"><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
+
+/* Biểu tượng 16×16 cho các nút căn chỉnh */
+const ic = (body: string) => `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">${body}</svg>`;
+const ln = (x1: number, y1: number, x2: number, y2: number) => `<path d="M${x1} ${y1}L${x2} ${y2}" stroke="currentColor" stroke-width="1.5"/>`;
+const rc = (x: number, y: number, w: number, h: number) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1" opacity=".75"/>`;
+const ALIGN: [string, string, string][] = [
+  ['left', 'Căn trái', ic(ln(2, 1, 2, 15) + rc(4, 3, 9, 4) + rc(4, 9, 6, 4))],
+  ['hcenter', 'Căn giữa (ngang)', ic(ln(8, 1, 8, 15) + rc(3, 3, 10, 4) + rc(5, 9, 6, 4))],
+  ['right', 'Căn phải', ic(ln(14, 1, 14, 15) + rc(3, 3, 9, 4) + rc(6, 9, 6, 4))],
+  ['top', 'Căn trên', ic(ln(1, 2, 15, 2) + rc(3, 4, 4, 9) + rc(9, 4, 4, 6))],
+  ['vcenter', 'Căn giữa (dọc)', ic(ln(1, 8, 15, 8) + rc(3, 3, 4, 10) + rc(9, 5, 4, 6))],
+  ['bottom', 'Căn dưới', ic(ln(1, 14, 15, 14) + rc(3, 3, 4, 9) + rc(9, 7, 4, 6))],
+];
+const DIST: [string, string, string][] = [
+  ['h', 'Phân bố đều theo chiều ngang', ic(ln(1, 1, 1, 15) + ln(15, 1, 15, 15) + rc(3, 4, 3, 8) + rc(10, 4, 3, 8))],
+  ['v', 'Phân bố đều theo chiều dọc', ic(ln(1, 1, 15, 1) + ln(1, 15, 15, 15) + rc(4, 3, 8, 3) + rc(4, 10, 8, 3))],
+];
+
+/** Khối nút căn chỉnh. toPage: chỉ có một hình/nhóm → căn theo trang. */
+function alignHTML(toPage: boolean, canDistribute: boolean) {
+  let h = `<div class="grp">${toPage ? 'Căn theo trang' : 'Căn chỉnh'}</div><div class="algn">`;
+  for (const [k, t, i] of ALIGN) h += `<button class="b alt ib" data-al="${k}" title="${t}">${i}</button>`;
+  if (!toPage) for (const [k, t, i] of DIST) h += `<button class="b alt ib" data-ds="${k}" title="${t}${canDistribute ? '' : ' (cần chọn ít nhất 3 hình/nhóm)'}" ${canDistribute ? '' : 'disabled'}>${i}</button>`;
+  return h + `</div>`;
+}
+function wireAlign(P: HTMLElement, st: DocStore) {
+  P.querySelectorAll<HTMLButtonElement>('[data-al]').forEach((b) => (b.onclick = () => st.align(b.dataset.al as any)));
+  P.querySelectorAll<HTMLButtonElement>('[data-ds]').forEach((b) => (b.onclick = () => st.distribute(b.dataset.ds as 'h' | 'v')));
+}
 
 /** Bảng thuộc tính bên phải, dựng lại mỗi khi đổi hình được chọn. */
 export class PropsPanel {
@@ -28,6 +57,7 @@ export class PropsPanel {
     const def = getShape(s.t);
     const redraw = () => st.emitChange();
     let h = `<div class="grp">Vị trí & kích thước</div><div class="r3"><div><label>X</label><input type="number" id="nx"></div><div><label>Y</label><input type="number" id="ny"></div><div><label>Xoay °</label><input type="number" id="nr"></div></div><div class="r2"><div><label>Rộng</label><input type="number" id="nw"></div><div><label>Cao</label><input type="number" id="nh"></div></div>`;
+    h += alignHTML(true, false);
     h += `<div class="grp">Màu sắc</div><div class="r2"><div><label>Màu tô</label><input type="color" id="cf" value="${s.fill}"></div><div><label>Màu viền</label><input type="color" id="cs" value="${s.stroke}"></div></div><label>Độ dày viền <span id="swv">${s.sw}</span></label><input type="range" id="sw" min="0" max="30" step="1" value="${s.sw}"><label>Độ trong suốt <span id="opv">${Math.round(s.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${s.op}">`;
     if (def.params.length) {
       h += `<div class="grp">Thông số hình</div>`;
@@ -40,6 +70,7 @@ export class PropsPanel {
     h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="fx">Lật ngang</button><button class="b alt sm" id="fy">Lật dọc</button><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button></div>`;
     h += `<p class="hint">Giữ Shift và bấm hình khác để chọn thêm, rồi bấm <b>Nhóm</b> (Ctrl+G).</p>`;
     P.innerHTML = h;
+    wireAlign(P, st);
     this.syncNumbers();
 
     const num = (id: string, k: 'x' | 'y' | 'r' | 'w' | 'h', fn?: (v: number) => number) => {
@@ -79,9 +110,12 @@ export class PropsPanel {
     if (!grouped) h += `<button class="b sm" id="grp">Nhóm (Ctrl+G)</button>`;
     if (anyGroup) h += `<button class="b alt sm" id="ugrp">Bỏ nhóm (Ctrl+Shift+G)</button>`;
     h += `</div><p class="hint">Kéo để dời cả ${grouped ? 'nhóm' : 'vùng chọn'} · kéo ô vuông ở góc để phóng to/thu nhỏ đều · kéo chấm tròn để xoay. Bấm một hình trong vùng chọn (không kéo) để chọn riêng nó.</p>`;
+    const nu = st.selectionUnits;
+    h += alignHTML(nu === 1, nu >= 3);
     h += `<div class="grp">Màu sắc (áp dụng cho tất cả)</div><div class="r2"><div><label>Màu tô</label><input type="color" id="cf" value="${first.fill}"></div><div><label>Màu viền</label><input type="color" id="cs" value="${first.stroke}"></div></div><label>Độ trong suốt <span id="opv">${Math.round(first.op * 100)}%</span></label><input type="range" id="op" min="0.1" max="1" step="0.05" value="${first.op}">`;
     h += `<div class="grp">Thao tác</div><div class="btnrow"><button class="b alt sm" id="up">Lên trên</button><button class="b alt sm" id="dn">Xuống dưới</button><button class="b alt sm" id="top">Trên cùng</button><button class="b alt sm" id="bot">Dưới cùng</button><button class="b sm" id="dp">Nhân đôi</button><button class="b red sm" id="dl">Xóa</button></div>`;
     P.innerHTML = h;
+    wireAlign(P, st);
     P.querySelector<HTMLButtonElement>('#grp')?.addEventListener('click', () => st.group());
     P.querySelector<HTMLButtonElement>('#ugrp')?.addEventListener('click', () => st.ungroup());
     const cf = $<HTMLInputElement>(P, 'cf'), cs = $<HTMLInputElement>(P, 'cs'), op = $<HTMLInputElement>(P, 'op');

@@ -28,6 +28,10 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - Nhiều hình chỉ phóng đều (giữ tỉ lệ) vì hình đã xoay không kéo giãn lệch được mà vẫn đúng dạng. Thông số cần phóng theo (ví dụ cỡ chữ) khai báo bằng `ShapeDef.scaleParams`.
 - Khi xuất SVG, mỗi nhóm được bọc trong một thẻ `<g>` để Canva/Illustrator nhận ra nhóm.
 
+## Căn chỉnh & đường gióng (core/align.ts)
+- `alignShapes` / `distributeShapes` làm việc trên "khối" (nhóm = một khối). Chỉ có một khối thì căn theo trang.
+- `snapToGuides(khung đang kéo, các khung khác, trang, ngưỡng)` trả về độ dời để thẳng hàng cạnh/tâm và danh sách đường gióng; `EditorCanvas` chỉ việc vẽ. Trục nào không bắt được đường gióng thì vẫn bắt lưới như cũ.
+
 ## Điểm mở rộng đã chừa sẵn
 | Muốn thêm | Làm ở đâu |
 |---|---|

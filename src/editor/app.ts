@@ -24,6 +24,8 @@ export function startApp() {
   csize.onchange = () => store.setCanvasSize(+csize.value);
   const snap = $<HTMLInputElement>('snap');
   snap.onchange = () => (canvas.snapToGrid = snap.checked);
+  const guides = $<HTMLInputElement>('guides');
+  guides.onchange = () => (canvas.smartGuides = guides.checked);
   $('undo').onclick = () => store.undo();
   $('redo').onclick = () => store.redo();
   $('clr').onclick = () => store.clear();
