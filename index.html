@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vector Studio – Bộ vẽ hình vector cho slide</title>
+  <meta name="description" content="Vẽ hình vector (khối, mũi tên, hình học, quạt tròn…) và xuất SVG dùng trong Canva, PowerPoint, Illustrator.">
+</head>
+<body>
+<header>
+  <h1>Vector Studio</h1>
+  <label>Khung <select id="csize"></select></label>
+  <label><input type="checkbox" id="snap" checked> Bắt lưới</label>
+  <label><input type="checkbox" id="transp" checked> Nền trong suốt khi xuất</label>
+  <span style="flex:1"></span>
+  <button class="b alt sm" id="undo">↶ Hoàn tác</button>
+  <button class="b alt sm" id="redo">↷ Làm lại</button>
+  <button class="b alt sm" id="clr">Xóa hết</button>
+  <button class="b alt" id="exSel">Xuất hình đang chọn</button>
+  <button class="b" id="exAll">Tải SVG (cả khung)</button>
+  <span id="msg"></span>
+</header>
+<main>
+  <aside id="lib"></aside>
+  <section id="wrapC"><svg id="stage"></svg></section>
+  <aside id="props" class="pr"></aside>
+</main>
+<div id="codeBox"><b>Mã SVG</b> – sao chép rồi lưu thành file .svg hoặc dán vào Canva<textarea id="code" readonly></textarea><div class="btnrow"><button class="b sm" id="cpCode">Sao chép</button><button class="b alt sm" id="closeCode">Đóng</button></div></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

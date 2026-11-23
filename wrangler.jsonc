@@ -1,0 +1,10 @@
+{
+  // Cấu hình triển khai lên Cloudflare (Workers + Static Assets).
+  // Cloudflare sẽ phục vụ thư mục dist/ sau khi chạy "npm run build".
+  "name": "vector-studio",
+  "compatibility_date": "2025-11-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
