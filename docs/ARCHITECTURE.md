@@ -58,6 +58,14 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - Xóa hình thì đường nối dính vào nó bị xóa theo.
 - Khung vẽ được dựng lại sau mỗi lần bấm, nên khi cần biết hình dưới con trỏ ở sự kiện `dblclick` thì dùng `document.elementFromPoint`, không dùng `e.target`.
 
+## Đường cong (core/curve.ts, shapes/curves.ts)
+- Loại hình `curve`. Hai đầu mút lưu theo tỉ lệ khung (`x0,y0,x1,y1`), nên đổi cỡ khung là co giãn đường cong.
+- Bézier: tay nắm mỗi đầu lưu dạng góc + độ dài **so với dây cung** (`a1,k1,a2,k2`), nên hai đầu chỉnh độc lập và kéo đầu mút thì giữ dáng. Parabol: `h` (độ cao đỉnh) và `sk` (vị trí đỉnh), vẽ như Bézier bậc hai.
+- Nét → hình đặc bằng `strokeOutline` (dùng chung với đường nối); đầu mút `round`/`butt`/`arrow`/`dot`/`point` (nhọn = độ dày giảm dần về 0).
+- `ShapeDef.refit` (mới): `DocStore.emitChange` gọi cho mọi hình có hook này; đường cong dùng nó để khung luôn ôm sát mà không dời đường cong.
+- `ParamDef.show` (mới): ẩn/hiện thanh chỉnh theo thông số khác (ví dụ chỉ hiện "Độ cao đỉnh" khi kiểu là parabol).
+- Tay nắm trên khung: chấm xanh (`data-ch="p0"/"p3"`) dời đầu mút; hình thoi hồng (`c1`/`c2`/`q`) đổi hướng, độ cong, đỉnh.
+
 ## Căn chỉnh & đường gióng (core/align.ts)
 - `alignShapes` / `distributeShapes` làm việc trên "khối" (nhóm = một khối). Chỉ có một khối thì căn theo trang.
 - `snapToGuides(khung đang kéo, các khung khác, trang, ngưỡng)` trả về độ dời để thẳng hàng cạnh/tâm và danh sách đường gióng; `EditorCanvas` chỉ việc vẽ. Trục nào không bắt được đường gióng thì vẫn bắt lưới như cũ.

@@ -35,7 +35,7 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 | Tay nắm kéo ngay trên khung (góc quạt, đầu mũi tên, bo góc, số tầng) | ⬜ |
 | Chuyển hình thành đường, sửa điểm neo (và quay lại dạng thông số nếu chưa sửa) | ⬜ |
 | Kéo cạnh để uốn cong cạnh | ⬜ |
-| Đường cong parabol/Bézier với đầu mút tùy chỉnh | ⬜ (đã có bản thử riêng) |
+| Đường cong parabol/Bézier với đầu mút tùy chỉnh | ✅ (tay nắm kéo trên khung, hai đầu chỉnh độc lập, đầu mút tròn/bằng/mũi tên/chấm/nhọn; phím C) |
 | Biến dạng: uốn, xoắn, kéo theo khung bao | ⬜ |
 | Kiểu "nét tay" (đường hơi lệch) cho sơ đồ phác | ⬜ |
 
@@ -65,7 +65,7 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 |---|---|
 | Màu tô đặc, viền, độ trong suốt | ✅ |
 | Gradient, pattern, hatch | ◐ (có gradient thẳng/tròn) |
-| Nét đứt, đầu mút mũi tên, độ dày nét đổi dọc đường | ◐ (đầu mút mũi tên/chấm/tròn cho đường nối) |
+| Nét đứt, đầu mút mũi tên, độ dày nét đổi dọc đường | ◐ (đầu mút mũi tên/chấm/tròn/bằng/nhọn; đầu nhọn thon dần; chưa có nét đứt) |
 | Bóng đổ, làm mờ | ⬜ |
 
 ## G. Nhập, xuất, nền tảng

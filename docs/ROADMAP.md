@@ -2,7 +2,7 @@
 
 > Bản đồ tính năng đầy đủ và thứ tự ưu tiên: [`FEATURE-MAP.md`](FEATURE-MAP.md). Mọi tính năng phải qua phép thử trong [`DESIGN-PRINCIPLES.md`](DESIGN-PRINCIPLES.md).
 
-Phiên bản hiện tại (0.7): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp, bộ màu thương hiệu + gradient, xuất PNG, nhóm A "đưa ý ra thành hình" (gõ để thêm, kéo thả, vẽ bằng kéo, chữ trên hình, Tab + đường nối, dán, khung vô hạn, tự bố trí).
+Phiên bản hiện tại (0.8): 42 mẫu hình, kéo/đổi cỡ/xoay, màu, thông số riêng từng hình, hoàn tác, xuất SVG, chọn nhiều + nhóm, căn chỉnh + đường gióng, panel lớp, bộ màu thương hiệu + gradient, xuất PNG, nhóm A "đưa ý ra thành hình" (gõ để thêm, kéo thả, vẽ bằng kéo, chữ trên hình, Tab + đường nối, dán, khung vô hạn, tự bố trí).
 
 Bản chạy thật: https://vector-studio.hktruc.workers.dev
 
@@ -21,7 +21,7 @@ Bản chạy thật: https://vector-studio.hktruc.workers.dev
 - [ ] Công cụ bút Bézier, sửa điểm neo
 - [ ] Nhập file SVG, tách thành hình sửa được
 - [ ] Phép toán hình (hợp, trừ, giao)
-- [ ] Đường parabol/đường cong có đầu mút tùy chỉnh (đã có bản thử riêng)
+- [x] Đường parabol/đường cong có đầu mút tùy chỉnh (Bézier chỉnh hai đầu độc lập, parabol một đỉnh, đầu mút tròn/bằng/mũi tên/chấm/nhọn, xuất hình đặc)
 
 ## Giai đoạn 3 – Web app hoàn chỉnh
 - [ ] Nhiều trang trong một tài liệu
