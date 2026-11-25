@@ -13,6 +13,8 @@ import { QuickAdd } from './quickadd';
 import { libItem } from '../shapes';
 import { isConnector } from '../core/connect';
 import { loadImageFile, svgTextToImage } from '../platform/image';
+import { canWriteImages, imageSize, writeImage, writeText } from '../platform/clipboard';
+import { clipImageSize, isOwnPaste, type OwnCopy } from '../core/clipboard';
 import type { LibItem } from '../core/types';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -169,32 +171,64 @@ export function startApp() {
 
   /* ---------- Sao chép / cắt / dán, thả file ---------- */
   const CLIP = 'application/x-vector-studio';
-  let clip: { json: string; text: string } | null = null;
+  /** Bản sao gần nhất (hình sửa được) — giữ trong trang; bộ nhớ tạm của máy nhận ảnh PNG/SVG. */
+  let clip: OwnCopy | null = null;
   const pasteAt = () => canvas.lastPointer ?? undefined;
+  // rời trang (sang Canva, PowerPoint…) thì bộ nhớ tạm có thể đã đổi
+  window.addEventListener('blur', () => { if (clip) clip.left = true; });
   document.addEventListener('copy', (e) => onCopy(e, false));
   document.addEventListener('cut', (e) => onCopy(e, true));
   function onCopy(e: ClipboardEvent, cut: boolean) {
-    if (typing(e.target) || canvas.isEditing) return;
-    const json = store.copySelection(); if (!json) return;
-    const text = exportShapes(store.selection.filter((s) => !s.hidden));
-    clip = { json, text };
-    e.clipboardData?.setData(CLIP, json);
-    e.clipboardData?.setData('text/plain', text); // dán sang chỗ khác thì được mã SVG
-    e.preventDefault();
+    if (typing(e.target) || canvas.isEditing) { if (clip) clip.left = true; return; } // đang chép chữ trong ô nhập
+    if (!copyOut(e)) return;
     if (cut) store.remove();
-    msg(cut ? 'Đã cắt.' : 'Đã sao chép. Ctrl+V để dán (dán tại chỗ con trỏ).');
   }
+  /**
+   * Sao chép vùng chọn ra bộ nhớ tạm của máy: ảnh PNG nét (2x, nền trong suốt) + SVG (nếu trình duyệt hỗ trợ),
+   * để Ctrl+V được ngay trong Canva, PowerPoint, Word, Google Slides. Trả về false nếu chưa chọn gì.
+   */
+  function copyOut(e?: ClipboardEvent): boolean {
+    const list = store.selection.filter((s) => !s.hidden);
+    const json = store.copySelection(); if (!json || !list.length) return false;
+    const svg = exportShapes(list), { w, h } = svgViewSize(svg), r = clipImageSize(w, h);
+    clip = { json, svg, w: r.width, h: r.height, at: Date.now(), left: false };
+    if (canWriteImages()) {
+      e?.preventDefault();
+      const png = svgToPng(sizedSVG(svg, r.width, r.height), r.width, r.height);
+      writeImage(svg, png)
+        .then((types) => msg(`Đã sao chép${types.includes('image/svg+xml') ? ' (ảnh PNG + SVG)' : ' (ảnh PNG)'}. Mở Canva hoặc PowerPoint rồi bấm Ctrl+V. Dán lại ở đây thì vẫn sửa được.`))
+        .catch(() => { writeText(svg).catch(() => {}); msg('Trình duyệt không cho đưa ảnh ra bộ nhớ tạm; đã sao chép dạng mã SVG. Dán trong Vector Studio vẫn sửa được.'); });
+    } else if (e?.clipboardData) {
+      // trình duyệt cũ: chỉ ghi được chữ
+      e.clipboardData.setData(CLIP, json);
+      e.clipboardData.setData('text/plain', svg);
+      e.preventDefault();
+      msg('Đã sao chép (trình duyệt này chưa hỗ trợ sao chép ảnh ra ngoài — dùng nút Tải để lấy file).');
+    } else writeText(svg).then(() => msg('Đã sao chép dạng mã SVG.')).catch(() => msg('Trình duyệt không cho sao chép.'));
+    return true;
+  }
+  props.onCopyOut = () => { if (!copyOut()) msg('Hãy chọn hình trước.'); };
+  props.onCopySvg = () => {
+    const list = store.selection.filter((s) => !s.hidden); if (!list.length) return msg('Hãy chọn hình trước.');
+    const svg = exportShapes(list);
+    writeText(svg).then(() => msg('Đã sao chép mã SVG. Trong Canva: dùng ứng dụng “Paste SVG” để dán thành hình vector.')).catch(() => out(svg, 'hinh.svg'));
+  };
   document.addEventListener('paste', async (e) => {
     if (typing(e.target) || canvas.isEditing || qa.isOpen) return;
     const dt = e.clipboardData; if (!dt) return;
     e.preventDefault();
-    const own = dt.getData(CLIP);
+    // đọc hết dữ liệu ngay (sau await trình duyệt không cho đọc nữa)
+    const own = dt.getData(CLIP), files = [...dt.files].filter((f) => f.type.startsWith('image/')), text = dt.getData('text/plain');
     if (own && store.pasteShapes(own, pasteAt())) return;
-    const files = [...dt.files].filter((f) => f.type.startsWith('image/'));
-    if (files.length) return addImages(files, pasteAt());
-    const text = dt.getData('text/plain');
+    // chưa rời trang kể từ lúc sao chép: dán hình sửa được
+    if (clip && isOwnPaste(clip, null, Date.now()) && store.pasteShapes(clip.json, pasteAt())) return;
+    if (files.length) {
+      // ảnh đúng cỡ ảnh mình vừa sao chép → vẫn dán hình sửa được
+      if (clip && isOwnPaste(clip, await imageSize(files[0]), Date.now()) && store.pasteShapes(clip.json, pasteAt())) return;
+      return addImages(files, pasteAt());
+    }
     if (!text) return;
-    if (clip && text === clip.text && store.pasteShapes(clip.json, pasteAt())) return;
+    if (clip && text === clip.svg && store.pasteShapes(clip.json, pasteAt())) return;
     if (/^\s*(<\?xml[^>]*>\s*)?<svg[\s>]/i.test(text)) {
       try { const im = await svgTextToImage(text); placeImage(im, pasteAt()); } catch { msg('Không đọc được mã SVG.'); }
       return;

@@ -10,7 +10,7 @@ import type { ArrayKind } from '../core/repeat';
 const esc = (t: unknown) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const $ = <T extends HTMLElement>(root: HTMLElement, id: string) => root.querySelector<T>('#' + id)!;
 
-const HELP = `<div class="empty"><b>Đổ ý ra nhanh</b><br>• <b>Bấm đúp</b> chỗ trống (hoặc phím <b>/</b>) rồi gõ “tròn”, “mũi tên”… Enter. Gõ chữ bất kỳ để thêm chữ.<br>• <b>Kéo</b> hình từ cột trái thả vào khung; <b>nhấn giữ</b> hình rồi kéo trên khung để vẽ đúng cỡ. Phím <b>R</b> chữ nhật · <b>O</b> tròn · <b>A</b> mũi tên · <b>T</b> chữ · <b>L</b> đường kẻ · <b>C</b> đường cong.<br>• <b>Hình sống:</b> chọn hình rồi kéo <b>hình thoi vàng</b> để đổi góc quạt, đầu mũi tên, bo góc, số tầng… Nút <b>Chuyển thành đường</b> để sửa điểm neo và uốn cạnh.<br>• <b>Đường cong:</b> chọn đường cong rồi kéo chấm xanh (đầu mút) hoặc hình thoi hồng (hướng, độ cong từng đầu) ngay trên khung.<br>• <b>Bấm đúp vào hình</b> (hoặc Enter) để gõ chữ lên hình. Khi gõ, nhấn <b>Tab</b> để tạo ý tiếp theo đã nối sẵn.<br>• Dán ảnh, mã SVG, hay danh sách chữ (Ctrl+V) thẳng vào khung.<br>• Ctrl + cuộn chuột để thu phóng, giữ phím cách rồi kéo để dời khung nhìn.<br><br><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva.<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Lớp:</b> thẻ <b>Lớp</b> ở cột trái để đổi tên, ẩn, khóa. Ctrl+Shift+H ẩn · Ctrl+Shift+L khóa hình đang chọn.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
+const HELP = `<div class="empty"><b>Đổ ý ra nhanh</b><br>• <b>Bấm đúp</b> chỗ trống (hoặc phím <b>/</b>) rồi gõ “tròn”, “mũi tên”… Enter. Gõ chữ bất kỳ để thêm chữ.<br>• <b>Kéo</b> hình từ cột trái thả vào khung; <b>nhấn giữ</b> hình rồi kéo trên khung để vẽ đúng cỡ. Phím <b>R</b> chữ nhật · <b>O</b> tròn · <b>A</b> mũi tên · <b>T</b> chữ · <b>L</b> đường kẻ · <b>C</b> đường cong.<br>• <b>Hình sống:</b> chọn hình rồi kéo <b>hình thoi vàng</b> để đổi góc quạt, đầu mũi tên, bo góc, số tầng… Nút <b>Chuyển thành đường</b> để sửa điểm neo và uốn cạnh.<br>• <b>Đường cong:</b> chọn đường cong rồi kéo chấm xanh (đầu mút) hoặc hình thoi hồng (hướng, độ cong từng đầu) ngay trên khung.<br>• <b>Bấm đúp vào hình</b> (hoặc Enter) để gõ chữ lên hình. Khi gõ, nhấn <b>Tab</b> để tạo ý tiếp theo đã nối sẵn.<br>• Dán ảnh, mã SVG, hay danh sách chữ (Ctrl+V) thẳng vào khung.<br>• Ctrl + cuộn chuột để thu phóng, giữ phím cách rồi kéo để dời khung nhìn.<br><br><b>Cách dùng</b><br>① Bấm một hình ở cột trái để thêm vào khung.<br>② Kéo để di chuyển, kéo ô vuông nhỏ để đổi cỡ (giữ Shift để giữ tỉ lệ), kéo chấm tròn phía trên để xoay.<br>③ Chọn hình để đổi màu, góc quạt, số tầng…<br>④ Bấm <b>Tải SVG</b> rồi kéo file vào Canva — hoặc chọn hình, <b>Ctrl+C</b> rồi <b>Ctrl+V</b> thẳng vào Canva / PowerPoint (dán thành ảnh nét, nền trong suốt).<br><br><b>Chọn nhiều:</b> giữ Shift rồi bấm từng hình, hoặc kéo chuột trên vùng trống để quét chọn. Ctrl+A chọn tất cả.<br><b>Nhóm:</b> Ctrl+G nhóm · Ctrl+Shift+G bỏ nhóm.<br><b>Lớp:</b> thẻ <b>Lớp</b> ở cột trái để đổi tên, ẩn, khóa. Ctrl+Shift+H ẩn · Ctrl+Shift+L khóa hình đang chọn.<br><b>Căn chỉnh:</b> chọn hình rồi dùng các nút căn ở cột này. Khi kéo, đường gióng hồng hiện ra lúc thẳng hàng với hình khác hoặc giữa trang (giữ Alt để tạm tắt).<br><br>Phím tắt: Delete xóa · Ctrl+D nhân đôi · Ctrl+Z hoàn tác · phím mũi tên nhích hình · Esc bỏ chọn.<br><br>Chữ sẽ không bị đổi sang đường nét; Canva có thể đổi font, nên gõ chữ trong Canva cho chắc.</div>`;
 
 /* Biểu tượng 16×16 cho các nút căn chỉnh */
 const ic = (body: string) => `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">${body}</svg>`;
@@ -53,6 +53,9 @@ function wireAlign(P: HTMLElement, st: DocStore) {
 
 /** Bảng thuộc tính bên phải, dựng lại mỗi khi đổi hình được chọn. */
 export class PropsPanel {
+  /** Sao chép vùng chọn ra bộ nhớ tạm (ảnh) để dán vào Canva/PowerPoint; sao chép mã SVG. */
+  onCopyOut: () => void = () => {};
+  onCopySvg: () => void = () => {};
   /** Hiện thông báo ngắn (app nối với dòng thông báo trên thanh công cụ). */
   onMsg: (t: string) => void = () => {};
   /** Điểm neo đang chọn trên khung (khi đang sửa điểm neo) — bo/vát chỉ góc đó. */
@@ -295,7 +298,7 @@ export class PropsPanel {
   private toolsHTML(list: Shape[]) {
     const solids = list.filter((x) => canConvertToPath(x) || x.t === 'path');
     if (!list.some((x) => !isConnector(x))) return '';
-    let h = '';
+    let h = `<div class="grp">Dùng ở nơi khác</div><div class="btnrow" style="margin-top:0"><button class="b sm" id="cpout" title="Sao chép thành ảnh nét (nền trong suốt) — mở Canva hoặc PowerPoint rồi bấm Ctrl+V">⧉ Sao chép (Ctrl+C)</button><button class="b alt sm" id="cpsvg" title="Sao chép mã SVG (cho ứng dụng Paste SVG trong Canva, Figma, Illustrator…)">Sao chép mã SVG</button></div><p class="hint">Ctrl+C rồi Ctrl+V vào <b>Canva, PowerPoint, Word, Google Slides</b>: dán thành ảnh nét, nền trong suốt. Muốn đổi màu được trong Canva thì dùng <b>Tải SVG</b> rồi tải file lên Canva.</p>`;
     if (solids.length >= 2)
       h += `<div class="grp">Kết hợp hình</div><div class="bool">${BOOL.map(([k, l, i]) => `<button class="b alt" data-bool="${k}" title="${l} các hình đang chọn">${i}<span>${l}</span></button>`).join('')}</div><p class="hint">Màu lấy theo hình nằm dưới cùng. <b>Trừ</b>: hình dưới cùng trừ đi các hình phía trên.</p>`;
     const a = this.arr, ring = a.kind === 'ring';
@@ -310,6 +313,8 @@ export class PropsPanel {
 
   private wireTools() {
     const P = this.root, st = this.store, q = <T extends HTMLElement>(id: string) => P.querySelector<T>('#' + id);
+    q('cpout')?.addEventListener('click', () => this.onCopyOut());
+    q('cpsvg')?.addEventListener('click', () => this.onCopySvg());
     P.querySelectorAll<HTMLButtonElement>('[data-bool]').forEach((b) => (b.onclick = () => {
       const r = st.booleanOp(b.dataset.bool as any);
       if (r === -1) this.onMsg('Kết quả rỗng: các hình không chồng lên nhau theo cách này.');
