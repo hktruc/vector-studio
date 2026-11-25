@@ -59,6 +59,11 @@ Thư viện (catalog) ──bấm──▶ DocStore.addFromLibrary ──▶ doc
 - Xóa hình thì đường nối dính vào nó bị xóa theo.
 - Khung vẽ được dựng lại sau mỗi lần bấm, nên khi cần biết hình dưới con trỏ ở sự kiện `dblclick` thì dùng `document.elementFromPoint`, không dùng `e.target`.
 
+## Sao chép sang ứng dụng khác (core/clipboard.ts, platform/clipboard.ts)
+- Ctrl+C ghi vào bộ nhớ tạm của máy bằng Async Clipboard API: `image/png` (2x, nền trong suốt) và `image/svg+xml` (nếu `ClipboardItem.supports` cho phép). **Không** ghi `text/plain`, để PowerPoint/Canva không dán nhầm thành khối mã chữ. PNG truyền dạng Promise để gọi ngay trong lúc bấm phím (Safari yêu cầu).
+- Dữ liệu hình sửa được giữ trong trang (`OwnCopy`). Khi dán lại: chưa rời trang → dán hình sửa được; đã rời trang → chỉ coi là của mình nếu ảnh trong bộ nhớ tạm đúng bằng cỡ ảnh mình đã ghi (`isOwnPaste`), nếu không thì dán như ảnh.
+- Nút "Sao chép mã SVG" ghi mã SVG dạng chữ (cho ứng dụng Paste SVG trong Canva, Figma, Illustrator).
+
 ## Tạo hình phức tạp (nhóm D)
 - **Phép toán hình** (`core/boolean.ts`, không dùng thư viện ngoài): làm phẳng đường cong thành đa giác mịn (bước ~3px) → cắt mọi cạnh tại giao điểm (kể cả cạnh trùng nhau) → với mỗi đoạn nhỏ, thử hai điểm sát hai bên xem có thuộc kết quả không (winding number, tôn trọng nonzero/evenodd của từng mảnh) → giữ đoạn nằm trên ranh giới, quay chiều cho phần trong ở bên trái → nối thành vòng. Nhờ chiều nhất quán, lỗ thủng tô đúng với `nonzero`. Kết quả rút gọn điểm thẳng hàng (sai lệch ≤ 0.08px) và thành hình `path`.
 - Kiểm thử bằng **diện tích** (hợp + giao = tổng hai hình, v.v.) — cách chắc chắn nhất để biết phép toán đúng.

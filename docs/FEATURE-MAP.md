@@ -73,6 +73,7 @@ Trạng thái: ✅ đã có · ◐ có một phần · ⬜ chưa có.
 |---|---|
 | Xuất SVG (cả khung / một hình) | ✅ |
 | Xuất PNG, PDF, PPTX, DXF | ◐ (có PNG 1x/2x/4x) |
+| Ctrl+C trong Vector Studio → Ctrl+V vào Canva, PowerPoint, Word, Google Slides | ✅ (ảnh PNG 2x nền trong suốt + SVG; nút "Sao chép mã SVG" cho ứng dụng Paste SVG của Canva) |
 | Nhập SVG, ảnh nền, vector hóa ảnh | ⬜ |
 | Lưu tự động (tạm trong trình duyệt) | ✅ |
 | Lưu dự án lên đám mây, nhiều dự án, nhiều trang | ⬜ |
